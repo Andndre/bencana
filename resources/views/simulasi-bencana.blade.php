@@ -32,9 +32,9 @@
             </div>
 
             <!-- Logo -->
-            <img src="{{ asset('images/logo.webp') }}" alt="BENCANA Logo" class="relative z-10 mt-8 w-44">
+            <img src="{{ asset('images/logo.webp') }}" alt="BENCANA Logo" class="w-54 mt-42 relative z-10">
 
-            <div class="absolute bottom-[12%] left-1/2 flex w-full max-w-80 -translate-x-1/2 flex-col gap-2 px-4">
+            <div class="absolute bottom-[22%] left-1/2 flex w-full max-w-80 -translate-x-1/2 flex-col gap-2 px-4">
 
                 <a href="#" class="group relative block">
                     <img src="{{ asset('images/button.webp') }}" alt="Download Marker"

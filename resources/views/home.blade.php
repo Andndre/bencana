@@ -29,9 +29,9 @@
             style="background-image: url('{{ asset('images/bencana.webp') }}'); background-size: cover; background-position: center; background-repeat: no-repeat;">
             <!-- Logo -->
             <img src="{{ asset('images/logo.webp') }}" alt="BENCANA Logo"
-                class="w-50 absolute left-1/2 top-[3.5%] -translate-x-1/2">
+                class="absolute left-1/2 top-[10.5%] w-60 -translate-x-1/2">
 
-            <div class="absolute bottom-[12%] left-1/2 flex w-full max-w-80 -translate-x-1/2 flex-col gap-2 px-4">
+            <div class="absolute bottom-[22%] left-1/2 flex w-full max-w-80 -translate-x-1/2 flex-col gap-2 px-4">
 
                 <a href="#" class="group relative block">
                     <img src="{{ asset('images/button.webp') }}" alt="Peta Bencana"
