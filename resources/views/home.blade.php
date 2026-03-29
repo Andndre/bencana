@@ -19,22 +19,22 @@
         <div id="splash-screen"
             class="absolute inset-0 flex items-center justify-center transition-opacity duration-700 ease-in-out"
             style="background-color: #c25c06;">
-            <img src="{{ asset('images/bencana splash.png') }}" alt=""
+            <img src="{{ asset('images/bencana splash.webp') }}" alt=""
                 class="pointer-events-none absolute inset-0 h-full w-full object-cover">
-            <img src="{{ asset('images/logo.png') }}" alt="BENCANA Logo" class="relative z-10 w-48">
+            <img src="{{ asset('images/logo.webp') }}" alt="BENCANA Logo" class="relative z-10 w-48">
         </div>
 
         <div id="menu-screen"
             class="pointer-events-none absolute inset-0 flex scale-[1.03] flex-col items-center justify-start opacity-0 transition-opacity duration-700 ease-in-out"
-            style="background-image: url('{{ asset('images/bencana.png') }}'); background-size: cover; background-position: center; background-repeat: no-repeat;">
+            style="background-image: url('{{ asset('images/bencana.webp') }}'); background-size: cover; background-position: center; background-repeat: no-repeat;">
             <!-- Logo -->
-            <img src="{{ asset('images/logo.png') }}" alt="BENCANA Logo"
+            <img src="{{ asset('images/logo.webp') }}" alt="BENCANA Logo"
                 class="w-50 absolute left-1/2 top-[3.5%] -translate-x-1/2">
 
             <div class="absolute bottom-[12%] left-1/2 flex w-full max-w-80 -translate-x-1/2 flex-col gap-2 px-4">
 
                 <a href="#" class="group relative block">
-                    <img src="{{ asset('images/button.png') }}" alt="Peta Bencana"
+                    <img src="{{ asset('images/button.webp') }}" alt="Peta Bencana"
                         class="block w-full brightness-100 transition-transform duration-200 group-hover:scale-105 group-hover:brightness-110 group-active:scale-95">
                     <span
                         class="absolute inset-0 flex items-center justify-center text-center text-xl font-extrabold tracking-wide text-[#800000]">PETA
@@ -42,7 +42,7 @@
                 </a>
 
                 <a href="#" class="group relative block">
-                    <img src="{{ asset('images/button.png') }}" alt="Simulasi Bencana"
+                    <img src="{{ asset('images/button.webp') }}" alt="Simulasi Bencana"
                         class="block w-full brightness-100 transition-transform duration-200 group-hover:scale-105 group-hover:brightness-110 group-active:scale-95">
                     <span
                         class="absolute inset-0 flex items-center justify-center text-center text-xl font-extrabold tracking-wide text-[#800000]">SIMULASI
@@ -50,7 +50,7 @@
                 </a>
 
                 <a href="#" class="group relative block">
-                    <img src="{{ asset('images/button.png') }}" alt="Penanggulangan Bencana"
+                    <img src="{{ asset('images/button.webp') }}" alt="Penanggulangan Bencana"
                         class="block w-full brightness-100 transition-transform duration-200 group-hover:scale-105 group-hover:brightness-110 group-active:scale-95">
                     <span
                         class="absolute inset-0 flex items-center justify-center text-center text-xl font-extrabold tracking-wide text-[#800000]">PENANGGULANGAN
@@ -60,7 +60,7 @@
 
             <a href="#"
                 class="group absolute bottom-[3%] left-[4%] transition-transform duration-200 hover:scale-110 group-active:scale-95">
-                <img src="{{ asset('images/info.png') }}" alt="Info" class="w-12">
+                <img src="{{ asset('images/info.webp') }}" alt="Info" class="w-12">
             </a>
         </div>
 
