@@ -13,4 +13,9 @@ class HomeController extends Controller
     {
         return view('simulasi-bencana');
     }
+
+    public function penanggulanganBencana()
+    {
+        return view('penanggulangan-bencana');
+    }
 }

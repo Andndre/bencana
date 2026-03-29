@@ -49,7 +49,7 @@
                         BENCANA</span>
                 </a>
 
-                <a href="#" class="group relative block">
+                <a href="{{ route('penanggulangan-bencana') }}" class="group relative block">
                     <img src="{{ asset('images/button.webp') }}" alt="Penanggulangan Bencana"
                         class="block w-full brightness-100 transition-transform duration-200 group-hover:scale-105 group-hover:brightness-110 group-active:scale-95">
                     <span
