@@ -21,7 +21,7 @@
             style="background-color: #c25c06;">
             <img src="{{ asset('images/bencana splash.webp') }}" alt=""
                 class="pointer-events-none absolute inset-0 h-full w-full object-cover">
-            <img src="{{ asset('images/logo.webp') }}" alt="BENCANA Logo" class="relative z-10 w-48">
+            <img src="{{ asset('images/logo.webp') }}" alt="BENCANA Logo" class="w-63 relative z-10">
         </div>
 
         <div id="menu-screen"
