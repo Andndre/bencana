@@ -6,3 +6,4 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/simulasi-bencana', [HomeController::class, 'simulasiBencana'])->name('simulasi-bencana');
 Route::get('/penanggulangan-bencana', [HomeController::class, 'penanggulanganBencana'])->name('penanggulangan-bencana');
+Route::get('/peta-bencana', [HomeController::class, 'petaBencana'])->name('peta-bencana');

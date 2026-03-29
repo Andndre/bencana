@@ -18,4 +18,9 @@ class HomeController extends Controller
     {
         return view('penanggulangan-bencana');
     }
+
+    public function petaBencana()
+    {
+        return view('peta-bencana');
+    }
 }
