@@ -12,7 +12,7 @@
     @vite(['resources/css/app.css'])
 </head>
 
-<body class="flex h-screen w-screen justify-center overflow-hidden bg-black font-sans">
+<body class="flex h-dvh w-screen justify-center overflow-hidden bg-black font-sans">
     <div class="max-w-110 relative h-full w-full overflow-hidden shadow-2xl">
 
         <div id="page"

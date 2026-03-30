@@ -13,7 +13,7 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 
-<body class="flex h-screen w-screen justify-center overflow-hidden bg-black font-sans">
+<body class="flex h-dvh w-screen justify-center overflow-hidden bg-black font-sans">
 
     <!-- Mobile Container -->
     <div class="max-w-110 relative h-full w-full overflow-hidden shadow-2xl">

@@ -13,11 +13,14 @@
     @vite(['resources/css/app.css'])
 
     <style>
-        #map { width: 100%; height: 100%; }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
 
-<body class="flex h-screen w-screen justify-center overflow-hidden bg-black font-sans">
+<body class="flex h-dvh w-screen justify-center overflow-hidden bg-black font-sans">
     <div class="max-w-110 relative h-full w-full overflow-hidden shadow-2xl">
 
         <div id="page"
@@ -29,7 +32,7 @@
             <div class="absolute inset-0 bg-black/30"></div>
 
             <!-- Header -->
-            <div class="relative z-1000 flex w-full items-center justify-center bg-[#ffac00] px-4 py-3 shadow-md">
+            <div class="z-1000 relative flex w-full items-center justify-center bg-[#ffac00] px-4 py-3 shadow-md">
                 <h1 class="text-center text-xl font-extrabold tracking-wide text-[#800000]">PETA BENCANA</h1>
             </div>
 
@@ -41,7 +44,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             var map = L.map('map', {
                 center: [-8.4, 115.2],
                 zoom: 9,
@@ -52,7 +55,9 @@
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
 
-            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            L.control.zoom({
+                position: 'bottomright'
+            }).addTo(map);
         });
     </script>
 </body>
