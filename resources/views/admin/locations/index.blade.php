@@ -2,7 +2,7 @@
 
 @section('title', 'Kelola Lokasi Peta')
 @section('page-title', 'Kelola Lokasi Peta')
-@section('page-subtitle', 'Tambah dan hapus marker lokasi bencana di peta')
+@section('page-subtitle', 'Tambah, edit, dan hapus marker lokasi bencana di peta')
 
 @section('header-actions')
     <a href="{{ route('admin.disasters.index') }}"
@@ -90,20 +90,25 @@
                         <th class="px-5 py-3 text-center text-xs font-bold text-gray-500 uppercase">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody class="divide-y divide-gray-100" id="locations-body">
                     @forelse ($disasters as $disaster)
                         @foreach ($disaster->locations as $location)
-                            <tr class="hover:bg-gray-50 transition-colors" data-lat="{{ $location->latitude }}" data-lng="{{ $location->longitude }}" data-name="{{ $location->location_name }}" data-disaster="{{ $disaster->name }}" data-disaster-color="{{ $disaster->slug }}">
+                            <tr id="view-row-{{ $location->id }}"
+                                data-lat="{{ $location->latitude }}"
+                                data-lng="{{ $location->longitude }}"
+                                data-name="{{ $location->location_name }}"
+                                data-disaster="{{ $disaster->name }}"
+                                data-disaster-color="{{ $disaster->slug }}">
                                 <td class="px-5 py-3.5">
-                                    <span class="font-semibold text-gray-900">{{ $location->location_name }}</span>
+                                    <span class="font-semibold text-gray-900 view-name">{{ $location->location_name }}</span>
                                 </td>
                                 <td class="px-5 py-3.5">
-                                    <span class="inline-flex items-center rounded-full bg-[#c25c06]/10 px-2.5 py-0.5 text-xs font-bold text-[#c25c06]">
+                                    <span class="inline-flex items-center rounded-full bg-[#c25c06]/10 px-2.5 py-0.5 text-xs font-bold text-[#c25c06] view-disaster">
                                         {{ $disaster->name }}
                                     </span>
                                 </td>
                                 <td class="px-5 py-3.5">
-                                    <code class="text-xs text-gray-500">{{ number_format($location->latitude, 4) }}, {{ number_format($location->longitude, 4) }}</code>
+                                    <code class="text-xs text-gray-500 view-coords">{{ number_format($location->latitude, 4) }}, {{ number_format($location->longitude, 4) }}</code>
                                 </td>
                                 <td class="px-5 py-3.5 text-center">
                                     <div class="flex items-center justify-center gap-1">
@@ -112,6 +117,10 @@
                                             class="rounded-lg border border-blue-200 bg-white px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
                                             title="Tampilkan di peta">
                                             📍
+                                        </button>
+                                        <button type="button" onclick="showEdit({{ $location->id }})"
+                                            class="rounded-lg border border-yellow-200 bg-white px-2 py-1 text-xs font-semibold text-yellow-600 hover:bg-yellow-50 transition-colors">
+                                            Edit
                                         </button>
                                         <form method="POST" action="{{ route('admin.locations.destroy', $location) }}" class="inline">
                                             @csrf
@@ -123,6 +132,55 @@
                                             </button>
                                         </form>
                                     </div>
+                                </td>
+                            </tr>
+
+                            {{-- Edit row (hidden by default) --}}
+                            <tr id="edit-row-{{ $location->id }}" class="hidden bg-amber-50/50">
+                                <td colspan="4" class="px-5 py-4">
+                                    <form method="POST" action="{{ route('admin.locations.update', $location) }}" id="edit-form-{{ $location->id }}" onsubmit="submitEdit(event, {{ $location->id }})">
+                                        @csrf
+                                        @method('PUT')
+                                        <div class="flex flex-wrap items-end gap-3">
+                                            <div class="flex-1 min-w-[140px]">
+                                                <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Lokasi</label>
+                                                <input type="text" name="location_name" required
+                                                    value="{{ $location->location_name }}"
+                                                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-[#c25c06] focus:outline-none focus:ring-2 focus:ring-[#c25c06]/20">
+                                            </div>
+                                            <div class="w-36">
+                                                <label class="block text-xs font-semibold text-gray-600 mb-1">Bencana</label>
+                                                <select name="disaster_id" required
+                                                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-[#c25c06] focus:outline-none focus:ring-2 focus:ring-[#c25c06]/20">
+                                                    @foreach (\App\Models\Disaster::all() as $d)
+                                                        <option value="{{ $d->id }}" {{ $d->id == $disaster->id ? 'selected' : '' }}>{{ $d->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="w-32">
+                                                <label class="block text-xs font-semibold text-gray-600 mb-1">Latitude</label>
+                                                <input type="number" step="0.0000001" name="latitude" required
+                                                    value="{{ $location->latitude }}"
+                                                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-[#c25c06] focus:outline-none focus:ring-2 focus:ring-[#c25c06]/20">
+                                            </div>
+                                            <div class="w-32">
+                                                <label class="block text-xs font-semibold text-gray-600 mb-1">Longitude</label>
+                                                <input type="number" step="0.0000001" name="longitude" required
+                                                    value="{{ $location->longitude }}"
+                                                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-[#c25c06] focus:outline-none focus:ring-2 focus:ring-[#c25c06]/20">
+                                            </div>
+                                            <div class="flex gap-2 flex-shrink-0">
+                                                <button type="submit"
+                                                    class="rounded-lg bg-[#c25c06] px-4 py-2 text-xs font-bold text-white hover:bg-[#a04a05] transition-colors">
+                                                    Simpan
+                                                </button>
+                                                <button type="button" onclick="cancelEdit({{ $location->id }})"
+                                                    class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors">
+                                                    Batal
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
                                 </td>
                             </tr>
                         @endforeach
@@ -184,6 +242,20 @@
 
     function focusMarker(lat, lng) {
         map.setView([lat, lng], 14);
+    }
+
+    function showEdit(id) {
+        document.getElementById('view-row-' + id).classList.add('hidden');
+        document.getElementById('edit-row-' + id).classList.remove('hidden');
+    }
+
+    function cancelEdit(id) {
+        document.getElementById('edit-row-' + id).classList.add('hidden');
+        document.getElementById('view-row-' + id).classList.remove('hidden');
+    }
+
+    function submitEdit(e, id) {
+        // Allow normal form submission
     }
 
     window.focusMarker = focusMarker;

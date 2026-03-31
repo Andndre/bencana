@@ -112,6 +112,20 @@ class AdminController extends Controller
         return redirect()->route('admin.locations')->with('success', 'Lokasi berhasil ditambahkan.');
     }
 
+    public function updateLocation(Request $request, DisasterLocation $location): RedirectResponse
+    {
+        $validated = $request->validate([
+            'disaster_id' => 'required|exists:disasters,id',
+            'location_name' => 'required|string|max:255',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ]);
+
+        $location->update($validated);
+
+        return redirect()->route('admin.locations')->with('success', 'Lokasi berhasil diperbarui.');
+    }
+
     public function destroyLocation(DisasterLocation $location): RedirectResponse
     {
         $location->delete();

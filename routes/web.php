@@ -23,6 +23,7 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     Route::delete('/disasters/steps/{step}', [AdminController::class, 'destroyStep'])->name('admin.disasters.steps.destroy');
     Route::get('/locations', [AdminController::class, 'editLocations'])->name('admin.locations');
     Route::post('/locations', [AdminController::class, 'storeLocation'])->name('admin.locations.store');
+    Route::put('/locations/{location}', [AdminController::class, 'updateLocation'])->name('admin.locations.update');
     Route::delete('/locations/{location}', [AdminController::class, 'destroyLocation'])->name('admin.locations.destroy');
 });
 
