@@ -94,11 +94,14 @@
             </div>
 
             <!-- Dots -->
-            <div class="mb-2 flex justify-center gap-2">
+            <div class="mb-2 flex h-4 items-center justify-center gap-2">
                 @foreach ($disasters as $index => $disaster)
                     <button
-                        class="nav-dot {{ $index === 0 ? 'h-3 w-3 bg-[#800000]' : 'h-2 w-2 bg-[#800000]/40' }} rounded-full transition-all duration-200"
-                        data-index="{{ $index }}" aria-label="{{ $disaster->name }}">
+                        class="nav-dot rounded-full transition-all duration-200"
+                        data-index="{{ $index }}"
+                        data-active="{{ $index === 0 ? 'true' : 'false' }}"
+                        style="background-color: {{ $index === 0 ? '#800000' : 'rgba(128,0,0,0.4)' }}; width: {{ $index === 0 ? '12px' : '8px' }}; height: {{ $index === 0 ? '12px' : '8px' }};"
+                        aria-label="{{ $disaster->name }}">
                     </button>
                 @endforeach
             </div>
@@ -145,11 +148,15 @@
                 // Update dots
                 dots.forEach((dot, i) => {
                     if (i === currentIndex) {
-                        dot.classList.remove('h-2', 'w-2', 'bg-[#800000]/40');
-                        dot.classList.add('h-3', 'w-3', 'bg-[#800000]');
+                        dot.style.backgroundColor = '#800000';
+                        dot.style.width = '12px';
+                        dot.style.height = '12px';
+                        dot.dataset.active = 'true';
                     } else {
-                        dot.classList.remove('h-3', 'w-3', 'bg-[#800000]');
-                        dot.classList.add('h-2', 'w-2', 'bg-[#800000]/40');
+                        dot.style.backgroundColor = 'rgba(128,0,0,0.4)';
+                        dot.style.width = '8px';
+                        dot.style.height = '8px';
+                        dot.dataset.active = 'false';
                     }
                 });
 
