@@ -96,9 +96,7 @@
             <!-- Dots -->
             <div class="mb-2 flex h-4 items-center justify-center gap-2">
                 @foreach ($disasters as $index => $disaster)
-                    <button
-                        class="nav-dot rounded-full transition-all duration-200"
-                        data-index="{{ $index }}"
+                    <button class="nav-dot rounded-full transition-all duration-200" data-index="{{ $index }}"
                         data-active="{{ $index === 0 ? 'true' : 'false' }}"
                         style="background-color: {{ $index === 0 ? '#800000' : 'rgba(128,0,0,0.4)' }}; width: {{ $index === 0 ? '12px' : '8px' }}; height: {{ $index === 0 ? '12px' : '8px' }};"
                         aria-label="{{ $disaster->name }}">
@@ -109,9 +107,9 @@
             <!-- Arrows -->
             <div class="flex items-center justify-between">
                 <button id="nav-prev"
-                    class="flex items-center gap-1 px-2 py-1 text-sm font-extrabold text-[#800000] transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
+                    class="flex cursor-pointer items-center gap-1 px-2 py-1 text-sm font-extrabold text-[#800000] transition-transform hover:scale-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
                     {{ $disasters->count() <= 1 ? 'disabled' : '' }}>
-                    <img src="{{ asset('images/info.webp') }}" alt="" class="w-6 rotate-180">
+                    <img src="{{ asset('images/left-arrow.webp') }}" alt="" class="w-6">
                 </button>
 
                 <span class="text-sm font-bold text-[#800000]">
@@ -119,9 +117,9 @@
                 </span>
 
                 <button id="nav-next"
-                    class="flex items-center gap-1 px-2 py-1 text-sm font-extrabold text-[#800000] transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
+                    class="flex cursor-pointer items-center gap-1 px-2 py-1 text-sm font-extrabold text-[#800000] transition-transform hover:scale-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
                     {{ $disasters->count() <= 1 ? 'disabled' : '' }}>
-                    <img src="{{ asset('images/info.webp') }}" alt="" class="w-6">
+                    <img src="{{ asset('images/left-arrow.webp') }}" alt="" class="w-6 rotate-180">
                 </button>
             </div>
         </div>
