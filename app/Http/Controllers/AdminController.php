@@ -13,8 +13,39 @@ class AdminController extends Controller
 {
     public function index(): View
     {
+        $disasterCount = Disaster::count();
+        $locationCount = DisasterLocation::count();
+        return view('admin.index', compact('disasterCount', 'locationCount'));
+    }
+
+    public function disastersIndex(): View
+    {
         $disasters = Disaster::withCount('locations', 'mitigationSteps')->get();
         return view('admin.disasters.index', compact('disasters'));
+    }
+
+    public function createDisaster(): View
+    {
+        return view('admin.disasters.create');
+    }
+
+    public function storeDisaster(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'required|string|max:100|alpha_dash|unique:disasters,slug',
+            'description' => 'nullable|string',
+        ]);
+
+        Disaster::create($validated);
+
+        return redirect()->route('admin.disasters.index')->with('success', 'Bencana berhasil ditambahkan.');
+    }
+
+    public function destroyDisaster(Disaster $disaster): RedirectResponse
+    {
+        $disaster->delete();
+        return redirect()->route('admin.disasters.index')->with('success', 'Bencana berhasil dihapus.');
     }
 
     public function editDisaster(Disaster $disaster): View
