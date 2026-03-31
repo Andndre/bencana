@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Disaster;
+use App\Models\DisasterLocation;
+use Illuminate\View\View;
+
 class HomeController extends Controller
 {
     public function index()
@@ -16,11 +20,13 @@ class HomeController extends Controller
 
     public function penanggulanganBencana()
     {
-        return view('penanggulangan-bencana');
+        $disasters = Disaster::with('mitigationSteps')->get();
+        return view('penanggulangan-bencana', compact('disasters'));
     }
 
-    public function petaBencana()
+    public function petaBencana(): View
     {
-        return view('peta-bencana');
+        $locations = DisasterLocation::with('disaster')->get();
+        return view('peta-bencana', compact('locations'));
     }
 }
