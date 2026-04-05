@@ -80,7 +80,6 @@
             src="/storage/{{ $marker->path_model }}"
             position="0 0.25 0"
             scale="1 1 1"
-            animation="property: rotation; to: 0 360 0; dur: 4000; loop: true; easing: linear"
           ></a-gltf-model>
         @else
           <a-box
