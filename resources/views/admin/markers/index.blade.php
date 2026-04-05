@@ -64,15 +64,21 @@
                             @endif
                         </td>
                         <td class="px-6 py-4">
-                            <form method="POST" action="{{ route('admin.markers.destroy', $marker) }}"
-                                onsubmit="return confirm('Hapus marker &quot;{{ $marker->nama ?? $marker->marker_id }}&quot;?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                    class="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-400 transition-colors">
-                                    Hapus
-                                </button>
-                            </form>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ route('admin.markers.edit', $marker) }}"
+                                    class="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                                    Edit
+                                </a>
+                                <form method="POST" action="{{ route('admin.markers.destroy', $marker) }}"
+                                    onsubmit="return confirm('Hapus marker &quot;{{ $marker->nama ?? $marker->marker_id }}&quot;?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                        class="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-400 transition-colors">
+                                        Hapus
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 @empty
