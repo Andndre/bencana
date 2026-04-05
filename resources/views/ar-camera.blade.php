@@ -7,6 +7,7 @@
 
   <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.7/aframe/build/aframe-ar.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
 
   <script src="/js/gesture-detector.js"></script>
   <script src="/js/gesture-handler.js"></script>
@@ -80,6 +81,7 @@
             src="/storage/{{ $marker->path_model }}"
             position="0 0.25 0"
             scale="1 1 1"
+            animation-mixer="clip: *; loop: repeat"
           ></a-gltf-model>
         @else
           <a-box
