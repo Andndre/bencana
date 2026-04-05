@@ -15,12 +15,14 @@ class AdminController extends Controller
     {
         $disasterCount = Disaster::count();
         $locationCount = DisasterLocation::count();
+
         return view('admin.index', compact('disasterCount', 'locationCount'));
     }
 
     public function disastersIndex(): View
     {
         $disasters = Disaster::withCount('locations', 'mitigationSteps')->get();
+
         return view('admin.disasters.index', compact('disasters'));
     }
 
@@ -45,12 +47,14 @@ class AdminController extends Controller
     public function destroyDisaster(Disaster $disaster): RedirectResponse
     {
         $disaster->delete();
+
         return redirect()->route('admin.disasters.index')->with('success', 'Bencana berhasil dihapus.');
     }
 
     public function editDisaster(Disaster $disaster): View
     {
         $disaster->load('mitigationSteps');
+
         return view('admin.disasters.edit', compact('disaster'));
     }
 
@@ -95,6 +99,7 @@ class AdminController extends Controller
     public function editLocations(): View
     {
         $disasters = Disaster::with('locations')->get();
+
         return view('admin.locations.index', compact('disasters'));
     }
 
@@ -129,12 +134,14 @@ class AdminController extends Controller
     public function destroyLocation(DisasterLocation $location): RedirectResponse
     {
         $location->delete();
+
         return redirect()->route('admin.locations')->with('success', 'Lokasi berhasil dihapus.');
     }
 
     public function destroyStep(MitigationStep $step): RedirectResponse
     {
         $step->delete();
+
         return redirect()->back()->with('success', 'Langkah berhasil dihapus.');
     }
 }

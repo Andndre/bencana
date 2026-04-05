@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ArMarker;
 use App\Models\Disaster;
 use App\Models\DisasterLocation;
 use Illuminate\View\View;
@@ -21,12 +22,23 @@ class HomeController extends Controller
     public function penanggulanganBencana()
     {
         $disasters = Disaster::with('mitigationSteps')->get();
+
         return view('penanggulangan-bencana', compact('disasters'));
     }
 
     public function petaBencana(): View
     {
         $locations = DisasterLocation::with('disaster')->get();
+
         return view('peta-bencana', compact('locations'));
+    }
+
+    public function arKamera(): View
+    {
+        $arMarkers = ArMarker::whereNotNull('path_patt')
+            ->with('disaster')
+            ->get();
+
+        return view('ar-camera', compact('arMarkers'));
     }
 }

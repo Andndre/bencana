@@ -33,7 +33,7 @@
 
             <div class="absolute bottom-[22%] left-1/2 flex w-full max-w-80 -translate-x-1/2 flex-col gap-2 px-4">
 
-                <a href="#" class="group relative block">
+                <a href="{{ route('ar-markers.download') }}" class="group relative block">
                     <img src="{{ asset('images/button.webp') }}" alt="Download Marker"
                         class="block w-full brightness-100 transition-transform duration-200 group-hover:scale-105 group-hover:brightness-110 group-active:scale-95">
                     <span
@@ -41,7 +41,7 @@
                         MARKER</span>
                 </a>
 
-                <a href="#" class="group relative block">
+                <a href="{{ route('ar-kamera') }}" class="group relative block">
                     <img src="{{ asset('images/button.webp') }}" alt="Buka AR"
                         class="block w-full brightness-100 transition-transform duration-200 group-hover:scale-105 group-hover:brightness-110 group-active:scale-95">
                     <span

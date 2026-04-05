@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ArMarkerController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 
@@ -11,6 +12,8 @@ Route::get('/dashboard', function () {
 Route::get('/simulasi-bencana', [HomeController::class, 'simulasiBencana'])->name('simulasi-bencana');
 Route::get('/penanggulangan-bencana', [HomeController::class, 'penanggulanganBencana'])->name('penanggulangan-bencana');
 Route::get('/peta-bencana', [HomeController::class, 'petaBencana'])->name('peta-bencana');
+Route::get('/ar-kamera', [HomeController::class, 'arKamera'])->name('ar-kamera');
+Route::get('/ar-markers/download', [ArMarkerController::class, 'downloadZip'])->name('ar-markers.download');
 
 Route::middleware('auth')->prefix('admin')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('admin.index');
@@ -25,6 +28,10 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     Route::post('/locations', [AdminController::class, 'storeLocation'])->name('admin.locations.store');
     Route::put('/locations/{location}', [AdminController::class, 'updateLocation'])->name('admin.locations.update');
     Route::delete('/locations/{location}', [AdminController::class, 'destroyLocation'])->name('admin.locations.destroy');
+    Route::get('/markers', [ArMarkerController::class, 'index'])->name('admin.markers.index');
+    Route::get('/markers/create', [ArMarkerController::class, 'create'])->name('admin.markers.create');
+    Route::post('/markers', [ArMarkerController::class, 'store'])->name('admin.markers.store');
+    Route::delete('/markers/{marker}', [ArMarkerController::class, 'destroy'])->name('admin.markers.destroy');
 });
 
 require __DIR__.'/auth.php';
