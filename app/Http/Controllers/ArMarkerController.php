@@ -53,6 +53,57 @@ class ArMarkerController extends Controller
             ->with('success', 'Marker AR berhasil diupload.');
     }
 
+    public function edit(ArMarker $marker): View
+    {
+        $disasters = Disaster::orderBy('name')->get();
+
+        return view('admin.markers.edit', compact('marker', 'disasters'));
+    }
+
+    public function update(Request $request, ArMarker $marker)
+    {
+        $request->validate([
+            'nama' => 'required|string|max:255',
+            'disaster_id' => 'nullable|integer|exists:disasters,id',
+            'path_gambar_marker' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'path_model' => 'nullable|file|mimes:glb,gltf,binary|max:20480',
+        ]);
+
+        $marker->nama = $request->nama;
+        $marker->disaster_id = $request->disaster_id;
+
+        // Handle gambar marker baru — hapus file lama + generate ulang .patt
+        if ($request->hasFile('path_gambar_marker')) {
+            $this->deletePublicFile($marker->path_gambar_marker);
+            $this->deletePublicFile($marker->path_patt);
+
+            $markerData = $this->storeMarkerAssets(
+                $request->file('path_gambar_marker'),
+                $request->file('path_model')
+            );
+
+            $marker->path_gambar_marker = $markerData['path_gambar_marker'];
+            $marker->path_patt = $markerData['path_patt'];
+            $marker->path_model = $markerData['path_model'] ?? $marker->path_model;
+        }
+
+        // Handle model saja diubah (tanpa ganti gambar)
+        if (!$request->hasFile('path_gambar_marker') && $request->hasFile('path_model')) {
+            $this->deletePublicFile($marker->path_model);
+
+            $modelFile = $request->file('path_model');
+            $ext = $modelFile->getClientOriginalExtension() ?: 'glb';
+            $modelPath = 'ar-markers/models/'.$marker->marker_id.'_model_'.now()->format('YmdHis').'.'.$ext;
+            Storage::disk('public')->put($modelPath, file_get_contents($modelFile->getRealPath()));
+            $marker->path_model = $modelPath;
+        }
+
+        $marker->save();
+
+        return redirect()->route('admin.markers.index')
+            ->with('success', 'Marker AR berhasil diperbarui.');
+    }
+
     public function destroy(ArMarker $marker)
     {
         $this->deletePublicFile($marker->path_gambar_marker);

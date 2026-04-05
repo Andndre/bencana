@@ -31,6 +31,8 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     Route::get('/markers', [ArMarkerController::class, 'index'])->name('admin.markers.index');
     Route::get('/markers/create', [ArMarkerController::class, 'create'])->name('admin.markers.create');
     Route::post('/markers', [ArMarkerController::class, 'store'])->name('admin.markers.store');
+    Route::get('/markers/{marker}/edit', [ArMarkerController::class, 'edit'])->name('admin.markers.edit');
+    Route::put('/markers/{marker}', [ArMarkerController::class, 'update'])->name('admin.markers.update');
     Route::delete('/markers/{marker}', [ArMarkerController::class, 'destroy'])->name('admin.markers.destroy');
 });
 

@@ -1,8 +1,8 @@
 @extends('admin._layout')
 
-@section('title', 'Upload Marker AR')
-@section('page-title', 'Upload Marker AR')
-@section('page-subtitle', 'Upload gambar marker AR untuk simulasi bencana')
+@section('title', 'Edit Marker AR')
+@section('page-title', 'Edit Marker AR')
+@section('page-subtitle', 'Ubah data marker AR')
 
 @section('header-actions')
     <a href="{{ route('admin.markers.index') }}"
@@ -15,15 +15,16 @@
 
     <div class="max-w-2xl">
 
-        <form method="POST" action="{{ route('admin.markers.store') }}" enctype="multipart/form-data"
+        <form method="POST" action="{{ route('admin.markers.update', $marker) }}" enctype="multipart/form-data"
             class="space-y-5 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
 
             @csrf
+            @method('PUT')
 
             <div>
                 <label class="mb-1.5 block text-sm font-semibold text-gray-700">Nama Marker <span
                         class="text-red-500">*</span></label>
-                <input type="text" name="nama" value="{{ old('nama') }}" required autofocus
+                <input type="text" name="nama" value="{{ old('nama', $marker->nama) }}" required autofocus
                     placeholder="Contoh: Marker Banjir"
                     class="@error('nama') @enderror w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-[#c25c06] focus:outline-none focus:ring-2 focus:ring-[#c25c06]/20">
                 @error('nama')
@@ -37,7 +38,8 @@
                     class="@error('disaster_id') @enderror w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#c25c06] focus:outline-none focus:ring-2 focus:ring-[#c25c06]/20">
                     <option value="">-- Pilih Bencana --</option>
                     @foreach ($disasters as $disaster)
-                        <option value="{{ $disaster->id }}" {{ old('disaster_id') == $disaster->id ? 'selected' : '' }}>
+                        <option value="{{ $disaster->id }}"
+                            {{ old('disaster_id', $marker->disaster_id) == $disaster->id ? 'selected' : '' }}>
                             {{ $disaster->name }}
                         </option>
                     @endforeach
@@ -48,18 +50,19 @@
             </div>
 
             <div>
-                <label class="mb-1.5 block text-sm font-semibold text-gray-700">Gambar Marker AR <span
-                        class="text-red-500">*</span></label>
+                <label class="mb-1.5 block text-sm font-semibold text-gray-700">Gambar Marker AR</label>
                 <div id="marker-drop-zone"
                     class="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-[#c25c06]">
                     <input type="file" name="path_gambar_marker" id="path_gambar_marker" accept="image/*"
                         class="@error('path_gambar_marker') border-red-500 @enderror hidden"
                         onchange="previewMarkerImage(this)">
                     <label for="path_gambar_marker" class="flex cursor-pointer flex-col items-center gap-3">
-                        <div id="preview-container" class="hidden">
-                            <img id="preview-image" class="mx-auto max-h-48 rounded-lg shadow">
+                        <div id="preview-container" @if (!$marker->path_gambar_marker) class="hidden" @endif>
+                            <img id="preview-image"
+                                 src="{{ $marker->path_gambar_marker ? Storage::disk('public')->url($marker->path_gambar_marker) : '' }}"
+                                 class="mx-auto max-h-48 rounded-lg shadow">
                         </div>
-                        <div id="upload-placeholder">
+                        <div id="upload-placeholder" @if ($marker->path_gambar_marker) class="hidden" @endif>
                             <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -70,6 +73,7 @@
                     </label>
                 </div>
                 <p class="mt-2 text-xs text-gray-400">
+                    Kosongkan jika tidak ingin mengubah gambar.
                     Gunakan gambar dengan kontras tinggi dan detail visual jelas. Minimal 512×512 pixel.
                     Format: JPEG, PNG, JPG, GIF, WebP. Maksimal 5MB.
                 </p>
@@ -85,15 +89,17 @@
                     <input type="file" name="path_model" id="path_model" accept=".glb,.gltf,.binary"
                         class="@error('path_model') border-red-500 @enderror hidden" onchange="previewModelFile(this)">
                     <label for="path_model" class="flex cursor-pointer flex-col items-center gap-3">
-                        <div id="model-preview-container" class="hidden">
+                        <div id="model-preview-container" @if (!$marker->path_model) class="hidden" @endif>
                             <svg class="mx-auto h-10 w-10 text-green-500" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <p id="model-filename" class="mt-2 text-sm font-medium text-green-600"></p>
+                            <p id="model-filename" class="mt-2 text-sm font-medium text-green-600">
+                                {{ $marker->path_model ? basename($marker->path_model) : '' }}
+                            </p>
                         </div>
-                        <div id="model-placeholder">
+                        <div id="model-placeholder" @if ($marker->path_model) class="hidden" @endif>
                             <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -104,8 +110,8 @@
                     </label>
                 </div>
                 <p class="mt-2 text-xs text-gray-400">
-                    Model 3D berekstensi .glb atau .gltf yang akan ditampilkan di marker.
-                    Maksimal 20MB. Jika tidak diupload, akan ditampilkan kubus placeholder.
+                    Kosongkan jika tidak ingin mengubah model 3D.
+                    Maksimal 20MB.
                 </p>
                 @error('path_model')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
@@ -115,7 +121,7 @@
             <div class="flex items-center gap-3 pt-2">
                 <button type="submit"
                     class="rounded-lg bg-[#c25c06] px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#a04a05]">
-                    Upload Marker
+                    Simpan Perubahan
                 </button>
                 <a href="{{ route('admin.markers.index') }}"
                     class="rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50">
