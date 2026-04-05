@@ -1,50 +1,67 @@
-/* global AFRAME */
-AFRAME.registerComponent('gesture-handler', {
+/* global AFRAME, THREE */
+
+AFRAME.registerComponent("gesture-handler", {
   schema: {
+    enabled: { default: true },
+    rotationFactor: { default: 5 },
     minScale: { default: 0.3 },
-    maxScale: { default: 8 }
+    maxScale: { default: 8 },
   },
 
   init: function () {
-    this.activeMarker = null;
-    this.currentScale = 1;
+    this.handleScale = this.handleScale.bind(this);
+    this.handleRotation = this.handleRotation.bind(this);
 
-    this.el.sceneEl.addEventListener('markerFound', function (evt) {
-      if (evt.detail.id === this.el.parentElement.id) {
-        this.activeMarker = evt.detail.id;
-        this.currentScale = 1;
-        this.el.setAttribute('scale', '1 1 1');
-      }
-    }.bind(this));
+    this.isVisible = false;
+    this.initialScale = this.el.object3D.scale.clone();
+    this.scaleFactor = 1;
 
-    this.el.sceneEl.addEventListener('markerLost', function (evt) {
-      if (evt.detail.id === this.el.parentElement.id) {
-        this.activeMarker = null;
-      }
-    }.bind(this));
+    this.el.sceneEl.addEventListener("markerFound", (e) => {
+      this.isVisible = true;
+    });
 
-    this.el.addEventListener('onefingermove', this.onOneFingerMove.bind(this));
-    this.el.addEventListener('twofingermove',  this.onTwoFingerMove.bind(this));
-  },
-
-  onOneFingerMove: function (evt) {
-    if (!this.activeMarker) return;
-    var deltaX = evt.detail.deltaX;
-    var rot = this.el.getAttribute('rotation') || { x: 0, y: 0, z: 0 };
-    this.el.setAttribute('rotation', {
-      x: rot.x,
-      y: rot.y + deltaX,
-      z: rot.z
+    this.el.sceneEl.addEventListener("markerLost", (e) => {
+      this.isVisible = false;
     });
   },
 
-  onTwoFingerMove: function (evt) {
-    if (!this.activeMarker) return;
-    var scale = Math.max(
-      this.data.minScale,
-      Math.min(this.data.maxScale, this.currentScale + evt.detail.spread)
-    );
-    this.currentScale = scale;
-    this.el.setAttribute('scale', scale + ' ' + scale + ' ' + scale);
-  }
+  update: function () {
+    if (this.data.enabled) {
+      this.el.sceneEl.addEventListener("onefingermove", this.handleRotation);
+      this.el.sceneEl.addEventListener("twofingermove", this.handleScale);
+    } else {
+      this.el.sceneEl.removeEventListener("onefingermove", this.handleRotation);
+      this.el.sceneEl.removeEventListener("twofingermove", this.handleScale);
+    }
+  },
+
+  remove: function () {
+    this.el.sceneEl.removeEventListener("onefingermove", this.handleRotation);
+    this.el.sceneEl.removeEventListener("twofingermove", this.handleScale);
+  },
+
+  handleRotation: function (event) {
+    if (this.isVisible) {
+      this.el.object3D.rotation.y +=
+        event.detail.positionChange.x * this.data.rotationFactor;
+      this.el.object3D.rotation.x +=
+        event.detail.positionChange.y * this.data.rotationFactor;
+    }
+  },
+
+  handleScale: function (event) {
+    if (this.isVisible) {
+      this.scaleFactor *=
+        1 + event.detail.spreadChange / event.detail.startSpread;
+
+      this.scaleFactor = Math.min(
+        Math.max(this.scaleFactor, this.data.minScale),
+        this.data.maxScale
+      );
+
+      this.el.object3D.scale.x = this.scaleFactor * this.initialScale.x;
+      this.el.object3D.scale.y = this.scaleFactor * this.initialScale.y;
+      this.el.object3D.scale.z = this.scaleFactor * this.initialScale.z;
+    }
+  },
 });
