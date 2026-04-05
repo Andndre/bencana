@@ -126,7 +126,7 @@ class MitigationStepSeeder extends Seeder
 
         foreach ($steps as $slug => $phases) {
             $disaster = Disaster::where('slug', $slug)->first();
-            if (!$disaster) {
+            if (! $disaster) {
                 continue;
             }
 

@@ -42,7 +42,7 @@ class DisasterLocationSeeder extends Seeder
 
         foreach ($locations as $disasterKey => $locationList) {
             $disaster = Disaster::where('slug', $disasterKey)->first();
-            if (!$disaster || empty($locationList)) {
+            if (! $disaster || empty($locationList)) {
                 continue;
             }
 
