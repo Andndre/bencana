@@ -11,6 +11,7 @@
 // ── State ────────────────────────────────────────────────────────────────────
 var markerVisibilityVersion = new Map(); // markerId → integer counter
 var modelStates = new Map();              // modelSrc → { loaded, object3D, animations }
+var audioElements = new Map();            // audioSrc → HTMLAudioElement
 var globalClock = null;
 var _arAnimationMixers = [];             // central mixer list, updated by scene component
 
@@ -70,6 +71,7 @@ function isMarkerLoadStillRelevant(markerId, visibilityVersion) {
 function parseMarkerModelData(marker) {
   return {
     modelSrc: marker.getAttribute('data-model-src') || null,
+    audioSrc: marker.getAttribute('data-audio-src') || null,
     modelScale: marker.getAttribute('data-model-scale') || '1 1 1',
     modelPosition: marker.getAttribute('data-model-position') || '0 0.25 0',
   };
@@ -157,6 +159,16 @@ function loadGLB(modelSrc, markerId, visibilityVersion) {
         }
 
         updateProgress(100);
+
+        // Download audio after GLB loaded
+        var audioSrc = parseMarkerModelData(document.getElementById(markerId)).audioSrc;
+        if (audioSrc && !audioElements.has(audioSrc)) {
+          var audio = new Audio();
+          audio.src = audioSrc;
+          audio.preload = 'auto';
+          audioElements.set(audioSrc, audio);
+        }
+
         resolve(gltf);
       },
       function (e) {
@@ -212,8 +224,6 @@ function initMarkerListeners() {
     var modelSrc = parseMarkerModelData(marker).modelSrc;
 
     marker.addEventListener('markerFound', function () {
-      if (!modelSrc) return;
-
       var version = bumpMarkerVisibilityVersion(markerId);
       showLoading();
       updateProgress(5);
@@ -228,19 +238,33 @@ function initMarkerListeners() {
         }
         updateProgress(100);
         hideLoading();
-        return;
+      } else if (modelSrc) {
+        loadGLB(modelSrc, markerId, version)
+          .then(function () {
+            updateProgress(100);
+            hideLoading();
+          })
+          .catch(function (err) {
+            console.error('[ar-loader] Gagal load model untuk', markerId, err);
+            updateProgress(100);
+            hideLoading();
+          });
+      } else {
+        updateProgress(100);
+        hideLoading();
       }
 
-      loadGLB(modelSrc, markerId, version)
-        .then(function () {
-          updateProgress(100);
-          hideLoading();
-        })
-        .catch(function (err) {
-          console.error('[ar-loader] Gagal load model untuk', markerId, err);
-          updateProgress(100);
-          hideLoading();
-        });
+      // Play audio when marker found
+      var audioSrc = parseMarkerModelData(marker).audioSrc;
+      if (audioSrc) {
+        var audio = audioElements.get(audioSrc);
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play().catch(function(e) {
+            console.warn('[ar-loader] Audio play failed:', e.message);
+          });
+        }
+      }
     });
 
     marker.addEventListener('markerLost', function () {
@@ -250,6 +274,15 @@ function initMarkerListeners() {
       var cached = modelStates.get(modelSrc);
       if (cached && cached.mixer) {
         cached.mixer.timeScale = 0;
+      }
+
+      // Pause audio when marker lost
+      var audioSrc = parseMarkerModelData(marker).audioSrc;
+      if (audioSrc) {
+        var audio = audioElements.get(audioSrc);
+        if (audio) {
+          audio.pause();
+        }
       }
     });
   });

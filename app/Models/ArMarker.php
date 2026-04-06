@@ -19,6 +19,7 @@ class ArMarker extends Model
         'path_gambar_marker',
         'path_patt',
         'path_model',
+        'path_audio',
     ];
 
     protected $casts = [
