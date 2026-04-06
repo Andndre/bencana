@@ -11,6 +11,7 @@
 
   <script src="/js/gesture-detector.js"></script>
   <script src="/js/gesture-handler.js"></script>
+  <script src="/js/ar-loader.js"></script>
 
   <style>
     body { margin: 0; overflow: hidden; background: #000; }
@@ -68,6 +69,9 @@
       data-marker-name="{{ $marker->nama }}"
       data-disaster-name="{{ $marker->disaster?->name ?? '' }}"
       data-disaster-description="{{ $marker->disaster?->description ?? '' }}"
+      data-model-src="{{ $marker->path_model ? '/storage/' . $marker->path_model : '' }}"
+      data-model-scale="1 1 1"
+      data-model-position="0 0.25 0"
     >
       <a-entity
         id="marker{{ $marker->marker_id }}-entity"
@@ -76,21 +80,14 @@
         class="clickable"
         gesture-handler
       >
-        @if ($marker->path_model)
-          <a-gltf-model
-            src="/storage/{{ $marker->path_model }}"
-            position="0 0.25 0"
-            scale="1 1 1"
-            animation-mixer="clip: *; loop: repeat"
-          ></a-gltf-model>
-        @else
+        @unless ($marker->path_model)
           <a-box
             color="#c25c06"
             width="0.5" height="0.5" depth="0.5"
             position="0 0.25 0"
             animation="property: rotation; to: 0 360 0; dur: 3000; loop: true; easing: linear"
           ></a-box>
-        @endif
+        @endunless
       </a-entity>
     </a-marker>
   @endforeach

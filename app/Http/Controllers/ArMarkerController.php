@@ -88,12 +88,12 @@ class ArMarkerController extends Controller
         }
 
         // Handle model saja diubah (tanpa ganti gambar)
-        if (!$request->hasFile('path_gambar_marker') && $request->hasFile('path_model')) {
+        if (! $request->hasFile('path_gambar_marker') && $request->hasFile('path_model')) {
             $this->deletePublicFile($marker->path_model);
 
             $modelFile = $request->file('path_model');
             $ext = $modelFile->getClientOriginalExtension() ?: 'glb';
-            $modelPath = 'ar-markers/models/' . $marker->marker_id . '_model_' . now()->format('YmdHis') . '.' . $ext;
+            $modelPath = 'ar-markers/models/'.$marker->marker_id.'_model_'.now()->format('YmdHis').'.'.$ext;
             Storage::disk('public')->put($modelPath, file_get_contents($modelFile->getRealPath()));
             $marker->path_model = $modelPath;
         }
@@ -126,7 +126,7 @@ class ArMarkerController extends Controller
         }
 
         $zip = new \ZipArchive;
-        $tempFile = tempnam(sys_get_temp_dir(), 'ar_markers_') . '.zip';
+        $tempFile = tempnam(sys_get_temp_dir(), 'ar_markers_').'.zip';
 
         if ($zip->open($tempFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
             abort(500, 'Gagal membuat file ZIP.');
@@ -134,19 +134,19 @@ class ArMarkerController extends Controller
 
         foreach ($markers as $marker) {
             $disasterName = $marker->disaster?->slug ?? 'umum';
-            $prefix = $disasterName . '/';
+            $prefix = $disasterName.'/';
 
             if (Storage::disk('public')->exists($marker->path_gambar_marker)) {
                 $pngContent = Storage::disk('public')->get($marker->path_gambar_marker);
-                $name = $marker->nama ?? 'marker_' . $marker->marker_id;
+                $name = $marker->nama ?? 'marker_'.$marker->marker_id;
                 $name = preg_replace('/[^a-zA-Z0-9_-]/', '_', $name);
-                $zip->addFromString($prefix . $name . '.png', $pngContent);
+                $zip->addFromString($prefix.$name.'.png', $pngContent);
             }
         }
 
         $zip->close();
 
-        return response()->download($tempFile, 'ar_markers_' . now()->format('YmdHis') . '.zip')
+        return response()->download($tempFile, 'ar_markers_'.now()->format('YmdHis').'.zip')
             ->deleteFileAfterSend(true);
     }
 
@@ -164,16 +164,16 @@ class ArMarkerController extends Controller
             $sourcePath = $file->getRealPath();
 
             $patternContent = ArPatternHelper::encodeImageToPattern($sourcePath);
-            $patternPath = 'ar-markers/patterns/' . $timestamp . '_patt_' . $baseName . '.patt';
+            $patternPath = 'ar-markers/patterns/'.$timestamp.'_patt_'.$baseName.'.patt';
             Storage::disk('public')->put($patternPath, $patternContent);
 
             $markerPng = ArPatternHelper::buildFullMarkerPng($sourcePath, 0.5, 512, 'black');
-            $markerPath = 'ar-markers/markers/' . $timestamp . '_marker_' . $baseName . '.png';
+            $markerPath = 'ar-markers/markers/'.$timestamp.'_marker_'.$baseName.'.png';
             Storage::disk('public')->put($markerPath, $markerPng);
 
             if ($modelFile) {
                 $ext = $modelFile->getClientOriginalExtension() ?: 'glb';
-                $modelPath = 'ar-markers/models/' . $timestamp . '_model_' . $baseName . '.' . $ext;
+                $modelPath = 'ar-markers/models/'.$timestamp.'_model_'.$baseName.'.'.$ext;
                 Storage::disk('public')->put($modelPath, file_get_contents($modelFile->getRealPath()));
             }
         } catch (\Throwable $e) {
