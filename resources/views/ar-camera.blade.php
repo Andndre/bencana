@@ -105,13 +105,43 @@ document.addEventListener('DOMContentLoaded', function () {
   var scene = document.querySelector('a-scene');
   var overlay = document.getElementById('loading-overlay');
 
+  // Log semua error JS yang terjadi
+  window.addEventListener('error', function (e) {
+    console.error('[ar-camera] JS Error:', e.message, e.filename + ':' + e.lineno);
+  });
+
+  // Cek apakah AR.js berhasil load video stream
+  scene.addEventListener('arSystemError', function (e) {
+    console.error('[ar-camera] AR System Error:', e.detail);
+    overlay.innerHTML = '<p style="color:#f55;font-size:14px;padding:20px;text-align:center">Kamera gagal diakses. Pastikan izin kamera diaktifkan.</p>';
+    setTimeout(function () { overlay.style.display = 'none'; }, 3000);
+  });
+
+  scene.addEventListener('cameraInit', function (e) {
+    console.log('[ar-camera] Kamera berhasil diinisialisasi', e.detail);
+  });
+
   // Hide overlay once AR.js renderer starts drawing
   scene.addEventListener('arRendered', function () {
     overlay.style.display = 'none';
   });
 
   // Fallback: always hide overlay after 10s even if arRendered doesn't fire
-  setTimeout(function () { overlay.style.display = 'none'; }, 10000);
+  setTimeout(function () {
+    overlay.style.display = 'none';
+    // Cek apakah video element punya stream aktif
+    var video = document.querySelector('video');
+    if (video && !video.srcObject) {
+      console.warn('[ar-camera] Video stream tidak aktif setelah 10 detik');
+      var msg = document.createElement('div');
+      msg.style = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:rgba(200,50,50,.9);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:9999;text-align:center';
+      msg.textContent = 'Kamera tidak aktif — cek izin kamera di browser';
+      document.body.appendChild(msg);
+      setTimeout(function () { msg.remove(); }, 5000);
+    } else if (video) {
+      console.log('[ar-camera] Video stream aktif — OK');
+    }
+  }, 10000);
 
   document.querySelectorAll('a-marker').forEach(function (marker) {
     marker.addEventListener('markerFound', function () {
