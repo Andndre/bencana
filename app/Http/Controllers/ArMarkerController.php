@@ -34,11 +34,26 @@ class ArMarkerController extends Controller
             'nama' => 'nullable|string|max:255',
             'path_gambar_marker' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'path_model' => 'nullable|file|mimes:glb,gltf,binary|max:20480',
+            'path_audio' => 'nullable|file|mimes:mp3,wav,ogg,webm|max:10240',
         ]);
+
+        $timestamp = now()->format('YmdHis');
+        $originalName = preg_replace('/[^a-zA-Z0-9\._-]/', '', $request->file('path_gambar_marker')->getClientOriginalName());
+        $baseName = preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($originalName, PATHINFO_FILENAME)) ?: 'marker';
+
+        $audioPath = null;
+        if ($request->hasFile('path_audio')) {
+            $audioFile = $request->file('path_audio');
+            $ext = $audioFile->getClientOriginalExtension() ?: 'mp3';
+            $audioPath = 'ar-markers/audio/'.$timestamp.'_audio_'.$baseName.'.'.$ext;
+            Storage::disk('public')->put($audioPath, file_get_contents($audioFile->getRealPath()));
+        }
 
         $markerData = $this->storeMarkerAssets(
             $request->file('path_gambar_marker'),
-            $request->file('path_model')
+            $request->file('path_model'),
+            $timestamp,
+            $baseName
         );
 
         ArMarker::create([
@@ -47,6 +62,7 @@ class ArMarkerController extends Controller
             'path_gambar_marker' => $markerData['path_gambar_marker'],
             'path_patt' => $markerData['path_patt'],
             'path_model' => $markerData['path_model'] ?? null,
+            'path_audio' => $audioPath,
         ]);
 
         return redirect()->route('admin.markers.index')
@@ -67,6 +83,7 @@ class ArMarkerController extends Controller
             'disaster_id' => 'nullable|integer|exists:disasters,id',
             'path_gambar_marker' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'path_model' => 'nullable|file|mimes:glb,gltf,binary|max:30720',
+            'path_audio' => 'nullable|file|mimes:mp3,wav,ogg,webm|max:10240',
         ]);
 
         $marker->nama = $request->nama;
@@ -98,6 +115,17 @@ class ArMarkerController extends Controller
             $marker->path_model = $modelPath;
         }
 
+        // Handle audio baru
+        if ($request->hasFile('path_audio')) {
+            $this->deletePublicFile($marker->path_audio);
+
+            $audioFile = $request->file('path_audio');
+            $ext = $audioFile->getClientOriginalExtension() ?: 'mp3';
+            $audioPath = 'ar-markers/audio/'.$marker->marker_id.'_audio_'.now()->format('YmdHis').'.'.$ext;
+            Storage::disk('public')->put($audioPath, file_get_contents($audioFile->getRealPath()));
+            $marker->path_audio = $audioPath;
+        }
+
         $marker->save();
 
         return redirect()->route('admin.markers.index')
@@ -106,6 +134,7 @@ class ArMarkerController extends Controller
 
     public function destroy(ArMarker $marker)
     {
+        $this->deletePublicFile($marker->path_audio);
         $this->deletePublicFile($marker->path_gambar_marker);
         $this->deletePublicFile($marker->path_patt);
         $this->deletePublicFile($marker->path_model);
@@ -150,11 +179,11 @@ class ArMarkerController extends Controller
             ->deleteFileAfterSend(true);
     }
 
-    private function storeMarkerAssets($file, $modelFile = null): array
+    private function storeMarkerAssets($file, $modelFile = null, $timestamp = null, $baseName = null): array
     {
+        $timestamp = $timestamp ?? now()->format('YmdHis');
         $originalName = preg_replace('/[^a-zA-Z0-9\._-]/', '', $file->getClientOriginalName());
-        $baseName = preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($originalName, PATHINFO_FILENAME)) ?: 'marker';
-        $timestamp = now()->format('YmdHis');
+        $baseName = $baseName ?? (preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($originalName, PATHINFO_FILENAME)) ?: 'marker');
 
         $markerPath = null;
         $patternPath = null;

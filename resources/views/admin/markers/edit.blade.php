@@ -118,6 +118,42 @@
                 @enderror
             </div>
 
+            <div>
+                <label class="mb-1.5 block text-sm font-semibold text-gray-700">Audio (.mp3 / .wav)</label>
+                <div id="audio-drop-zone"
+                    class="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-[#c25c06]">
+                    <input type="file" name="path_audio" id="path_audio" accept=".mp3,.wav,.ogg,.webm"
+                        class="@error('path_audio') border-red-500 @enderror hidden" onchange="previewAudioFile(this)">
+                    <label for="path_audio" class="flex cursor-pointer flex-col items-center gap-3">
+                        <div id="audio-preview-container" @if (!$marker->path_audio) class="hidden" @endif>
+                            <svg class="mx-auto h-10 w-10 text-green-500" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 19V6l12-3m0 0l-9-3m9 3v12m-9-3l9 3m-9-3l9 3" />
+                            </svg>
+                            <p id="audio-filename" class="mt-2 text-sm font-medium text-green-600">
+                                {{ $marker->path_audio ? basename($marker->path_audio) : '' }}
+                            </p>
+                        </div>
+                        <div id="audio-placeholder" @if ($marker->path_audio) class="hidden" @endif>
+                            <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M9 19V6l12-3m0 0l-9-3m9 3v12m-9-3l9 3m-9-3l9 3" />
+                            </svg>
+                            <p class="mt-2 text-sm text-gray-500">Klik untuk pilih file audio (opsional)</p>
+                        </div>
+                    </label>
+                </div>
+                <p class="mt-2 text-xs text-gray-400">
+                    Kosongkan jika tidak ingin mengubah audio.
+                    Maksimal 10MB.
+                </p>
+                @error('path_audio')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
             <div class="flex items-center gap-3 pt-2">
                 <button type="submit"
                     class="rounded-lg bg-[#c25c06] px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#a04a05]">
@@ -155,6 +191,15 @@
                 document.getElementById('model-filename').textContent = file.name;
                 document.getElementById('model-preview-container').classList.remove('hidden');
                 document.getElementById('model-placeholder').classList.add('hidden');
+            }
+        }
+
+        function previewAudioFile(input) {
+            var file = input.files[0];
+            if (file) {
+                document.getElementById('audio-filename').textContent = file.name;
+                document.getElementById('audio-preview-container').classList.remove('hidden');
+                document.getElementById('audio-placeholder').classList.add('hidden');
             }
         }
 
@@ -210,6 +255,34 @@
                 if (files.length > 0) {
                     Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'files').set.call(modelInput, files);
                     modelInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+        }
+
+        // --- Drag & Drop for Audio ---
+        var audioDropZone = document.getElementById('audio-drop-zone');
+        var audioInput = document.getElementById('path_audio');
+
+        if (audioDropZone && audioInput) {
+            ['dragenter', 'dragover'].forEach(function(eventName) {
+                audioDropZone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    audioDropZone.classList.add('border-[#c25c06]', 'bg-[#c25c06]/5');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(function(eventName) {
+                audioDropZone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    audioDropZone.classList.remove('border-[#c25c06]', 'bg-[#c25c06]/5');
+                }, false);
+            });
+
+            audioDropZone.addEventListener('drop', function(e) {
+                var files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'files').set.call(audioInput, files);
+                    audioInput.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             });
         }

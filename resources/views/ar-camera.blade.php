@@ -78,6 +78,7 @@
                 data-marker-name="{{ $marker->nama }}" data-disaster-name="{{ $marker->disaster?->name ?? '' }}"
                 data-disaster-description="{{ $marker->disaster?->description ?? '' }}"
                 data-model-src="{{ $marker->path_model ? '/storage/' . $marker->path_model : '' }}"
+                data-audio-src="{{ $marker->path_audio ? '/storage/' . $marker->path_audio : '' }}"
                 data-model-scale="1 1 1" data-model-position="0 0.25 0">
                 <a-entity id="marker{{ $marker->marker_id }}-entity" position="0 0 0" scale="1 1 1" class="clickable"
                     gesture-handler>
