@@ -81,8 +81,17 @@ function parseMarkerModelData(marker) {
 // ── Preload audio untuk satu marker ──────────────────────────────────────────
 function preloadAudioForMarker(marker) {
   var audioSrc = parseMarkerModelData(marker).audioSrc;
-  if (!audioSrc || audioElements.has(audioSrc)) return;
+  console.log('[ar-loader] preloadAudioForMarker called, audioSrc:', audioSrc);
+  if (!audioSrc) {
+    console.log('[ar-loader] No audioSrc, skipping');
+    return;
+  }
+  if (audioElements.has(audioSrc)) {
+    console.log('[ar-loader] Audio already cached:', audioSrc);
+    return;
+  }
 
+  console.log('[ar-loader] Creating new Audio element for:', audioSrc);
   var audio = new Audio();
   audio.src = audioSrc;
   audio.preload = 'auto';
@@ -92,7 +101,11 @@ function preloadAudioForMarker(marker) {
   }, false);
 
   audio.addEventListener('error', function(e) {
-    console.error('[ar-loader] Audio load failed:', audioSrc, e);
+    console.error('[ar-loader] Audio load failed:', audioSrc, 'error:', audio.error);
+  }, false);
+
+  audio.addEventListener('loadstart', function() {
+    console.log('[ar-loader] Audio load started:', audioSrc);
   }, false);
 
   audioElements.set(audioSrc, audio);
@@ -280,26 +293,45 @@ function initMarkerListeners() {
 
       // Play audio when marker found
       var audioSrc = parseMarkerModelData(marker).audioSrc;
+      console.log('[ar-loader] markerFound, audioSrc:', audioSrc);
+      console.log('[ar-loader] audioElements map size:', audioElements.size);
+      console.log('[ar-loader] audioElements keys:', Array.from(audioElements.keys()));
       if (audioSrc) {
         var audio = audioElements.get(audioSrc);
+        console.log('[ar-loader] cached audio element:', audio);
         if (audio) {
+          console.log('[ar-loader] audio state before play:', {
+            readyState: audio.readyState,
+            paused: audio.paused,
+            src: audio.src
+          });
           // Jika audio belum ready (buffering), buat element baru dan play langsung
           if (audio.readyState < 2) { // HAVE_CURRENT_DATA = 2
+            console.log('[ar-loader] Audio not ready, creating fresh Audio...');
             var freshAudio = new Audio(audioSrc);
             freshAudio.preload = 'auto';
             freshAudio.play().then(function() {
               console.log('[ar-loader] Audio playing (fresh):', audioSrc);
             }).catch(function(e) {
               console.error('[ar-loader] Audio play failed (fresh):', e);
+              console.error('[ar-loader] freshAudio error name:', e.name, 'message:', e.message);
             });
           } else {
+            console.log('[ar-loader] Audio ready, playing cached...');
             audio.currentTime = 0;
             audio.play().catch(function(e) {
               console.error('[ar-loader] Audio play failed:', e);
+              console.error('[ar-loader] audio error name:', e.name, 'message:', e.message);
             });
           }
         } else {
-          console.warn('[ar-loader] Audio element not found for:', audioSrc);
+          console.warn('[ar-loader] Audio element not found in cache, creating new...');
+          var newAudio = new Audio(audioSrc);
+          newAudio.play().then(function() {
+            console.log('[ar-loader] Audio playing (new):', audioSrc);
+          }).catch(function(e) {
+            console.error('[ar-loader] Audio play failed (new):', e);
+          });
         }
       }
     });
