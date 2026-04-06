@@ -12,6 +12,7 @@
 var markerVisibilityVersion = new Map(); // markerId → integer counter
 var modelStates = new Map();              // modelSrc → { loaded, object3D, animations }
 var audioElements = new Map();            // audioSrc → HTMLAudioElement
+window._arAudioElements = audioElements;  // debug: accessible from console
 var globalClock = null;
 var _arAnimationMixers = [];             // central mixer list, updated by scene component
 
@@ -75,6 +76,26 @@ function parseMarkerModelData(marker) {
     modelScale: marker.getAttribute('data-model-scale') || '1 1 1',
     modelPosition: marker.getAttribute('data-model-position') || '0 0.25 0',
   };
+}
+
+// ── Preload audio untuk satu marker ──────────────────────────────────────────
+function preloadAudioForMarker(marker) {
+  var audioSrc = parseMarkerModelData(marker).audioSrc;
+  if (!audioSrc || audioElements.has(audioSrc)) return;
+
+  var audio = new Audio();
+  audio.src = audioSrc;
+  audio.preload = 'auto';
+
+  audio.addEventListener('canplay', function() {
+    console.log('[ar-loader] Audio ready:', audioSrc);
+  }, false);
+
+  audio.addEventListener('error', function(e) {
+    console.error('[ar-loader] Audio load failed:', audioSrc, e);
+  }, false);
+
+  audioElements.set(audioSrc, audio);
 }
 
 // ── Loading Overlay UI ────────────────────────────────────────────────────────
@@ -223,6 +244,9 @@ function initMarkerListeners() {
     var markerId = marker.id;
     var modelSrc = parseMarkerModelData(marker).modelSrc;
 
+    // Preload audio SEBELUM markerFound event — agar audio ready saat marker terdeteksi
+    preloadAudioForMarker(marker);
+
     marker.addEventListener('markerFound', function () {
       var version = bumpMarkerVisibilityVersion(markerId);
       showLoading();
@@ -259,10 +283,23 @@ function initMarkerListeners() {
       if (audioSrc) {
         var audio = audioElements.get(audioSrc);
         if (audio) {
-          audio.currentTime = 0;
-          audio.play().catch(function(e) {
-            console.warn('[ar-loader] Audio play failed:', e.message);
-          });
+          // Jika audio belum ready (buffering), buat element baru dan play langsung
+          if (audio.readyState < 2) { // HAVE_CURRENT_DATA = 2
+            var freshAudio = new Audio(audioSrc);
+            freshAudio.preload = 'auto';
+            freshAudio.play().then(function() {
+              console.log('[ar-loader] Audio playing (fresh):', audioSrc);
+            }).catch(function(e) {
+              console.error('[ar-loader] Audio play failed (fresh):', e);
+            });
+          } else {
+            audio.currentTime = 0;
+            audio.play().catch(function(e) {
+              console.error('[ar-loader] Audio play failed:', e);
+            });
+          }
+        } else {
+          console.warn('[ar-loader] Audio element not found for:', audioSrc);
         }
       }
     });
