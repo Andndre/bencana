@@ -103,7 +103,10 @@ function hideLoading() {
 // GLTFLoader.load() otomatis handle kedua extension.
 function loadGLB(modelSrc, markerId, visibilityVersion) {
   return new Promise(function (resolve, reject) {
-    if (!globalClock) globalClock = new THREE.Clock();
+    if (!globalClock) {
+      globalClock = new THREE.Clock();
+      globalClock.start(); // Start clock agar getDelta() return elapsed time
+    }
 
     var loader = new THREE.GLTFLoader();
     var cancelled = false;
@@ -140,9 +143,11 @@ function loadGLB(modelSrc, markerId, visibilityVersion) {
           if (sceneEl) {
             if (!sceneEl._arDynamicMixers) {
               sceneEl._arDynamicMixers = [];
-              sceneEl.addEventListener('tick', function () {
-                var delta = globalClock.getDelta();
-                sceneEl._arDynamicMixers.forEach(function (m) { m.update(delta); });
+              sceneEl.addEventListener('tick', function (time, delta) {
+                // Pakai delta dari A-Frame tick (ms), convert ke detik
+                var dt = (delta !== undefined ? delta : globalClock.getDelta()) / 1000;
+                if (dt > 0.1) dt = 0.1; // clamp max delta agar tidak skip frame
+                sceneEl._arDynamicMixers.forEach(function (m) { m.update(dt); });
               });
             }
             sceneEl._arDynamicMixers.push(mixer);
