@@ -144,6 +144,20 @@
 
             document.querySelectorAll('a-marker').forEach(function(marker) {
                 marker.addEventListener('markerFound', function() {
+                    var audioSrc = parseMarkerModelData(marker).audioSrc;
+                    console.log('[ar-camera] markerFound:', marker.id, 'audioSrc:', audioSrc);
+                    if (audioSrc) {
+                        var cached = window._arAudioElements && window._arAudioElements.get(audioSrc);
+                        console.log('[ar-camera] cached audio element:', cached);
+                        if (cached) {
+                            console.log('[ar-camera] audio state:', {
+                                readyState: cached.readyState,
+                                paused: cached.paused,
+                                src: cached.src
+                            });
+                        }
+                    }
+
                     document.getElementById('marker-title').textContent = marker.getAttribute(
                         'data-marker-name');
                     document.getElementById('marker-description').textContent = marker.getAttribute(
