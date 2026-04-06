@@ -12,6 +12,7 @@
 var markerVisibilityVersion = new Map(); // markerId → integer counter
 var modelStates = new Map();              // modelSrc → { loaded, object3D, animations }
 var globalClock = null;
+var _arAnimationMixers = [];             // central mixer list, updated by scene component
 
 // ── Inisialisasi DRACO + Meshopt Loader ──────────────────────────────────────
 // Three.js r148 (A-Frame 1.5.0): setMeshoptDecoder adalah instance method,
@@ -133,26 +134,26 @@ function loadGLB(modelSrc, markerId, visibilityVersion) {
 
         // Jalankan semua animasi — clipAction.play() auto-starts dari time 0
         if (gltf.animations && gltf.animations.length > 0 && scene) {
+          // Animasi clock mulai saat loadGLB() dipanggil. Jika load cepat (<0.1s),
+          // initial getDelta() sudah aman. Jika lambat, clamp di animation loop
+          // (dt > 0.1) akan menanganinya. Dua pemanggilan getDelta() berikut
+          // mengsinkronkan clock agar mixer mulai dari elapsed ≈ 0.
+          globalClock.getDelta();
+          globalClock.getDelta();
+
           var mixer = new THREE.AnimationMixer(scene);
           gltf.animations.forEach(function (clip) {
             mixer.clipAction(clip).play();
           });
-          mixer._markerId = markerId; // untuk debugging
+          mixer._markerId = markerId;
+          _arAnimationMixers.push(mixer);
 
-          var sceneEl = document.querySelector('a-scene');
-          if (sceneEl) {
-            if (!sceneEl._arDynamicMixers) {
-              sceneEl._arDynamicMixers = [];
-              sceneEl.addEventListener('tick', function (time, delta) {
-                // Pakai delta dari A-Frame tick (ms), convert ke detik
-                var dt = (delta !== undefined ? delta : globalClock.getDelta()) / 1000;
-                if (dt > 0.1) dt = 0.1; // clamp max delta agar tidak skip frame
-                sceneEl._arDynamicMixers.forEach(function (m) { m.update(dt); });
-              });
-            }
-            sceneEl._arDynamicMixers.push(mixer);
-          }
-          console.log('[ar-loader] ' + gltf.animations.length + ' animasi dimulai untuk', markerId);
+          modelStates.set(modelSrc, {
+            loaded: true,
+            object3D: gltf.scene,
+            animations: gltf.animations,
+            mixer: mixer,
+          });
         }
 
         updateProgress(100);
@@ -221,18 +222,17 @@ function initMarkerListeners() {
 
       var cached = modelStates.get(modelSrc);
       if (cached && cached.loaded) {
+        // Resume mixer animasi saat marker muncul lagi
+        if (cached.mixer) {
+          cached.mixer.timeScale = 1;
+        }
         updateProgress(100);
         hideLoading();
         return;
       }
 
       loadGLB(modelSrc, markerId, version)
-        .then(function (gltf) {
-          modelStates.set(modelSrc, {
-            loaded: true,
-            object3D: gltf.scene,
-            animations: gltf.animations,
-          });
+        .then(function () {
           updateProgress(100);
           hideLoading();
         })
@@ -246,6 +246,11 @@ function initMarkerListeners() {
     marker.addEventListener('markerLost', function () {
       bumpMarkerVisibilityVersion(markerId);
       detachModel(markerId);
+      // Pause mixer saat marker hilang agar animasi tidak jalan saat model tidak terlihat
+      var cached = modelStates.get(modelSrc);
+      if (cached && cached.mixer) {
+        cached.mixer.timeScale = 0;
+      }
     });
   });
 
@@ -266,6 +271,38 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function onSceneReady() {
+  if (typeof AFRAME !== 'undefined') {
+    // A-Frame 1.5.0 TIDAK emit 'tick' sebagai DOM event — hanya component
+    // lifecycle method atau internal renderer loop. Kita gunakan rAF loop
+    // yang dimulai saat renderstart, dengan fallback timeout.
+    var sceneEl = document.querySelector('a-scene');
+    var _animationLoopStarted = false;
+
+    function startAnimationLoop() {
+      if (_animationLoopStarted) return;
+      _animationLoopStarted = true;
+      (function animationLoop() {
+        requestAnimationFrame(animationLoop);
+        if (globalClock) {
+          var dt = globalClock.getDelta();
+          if (dt > 0.1) dt = 0.1;
+          _arAnimationMixers.forEach(function (m) { m.update(dt); });
+        }
+      })();
+    }
+
+    sceneEl.addEventListener('renderstart', function () {
+      startAnimationLoop();
+    });
+
+    // Fallback: mulai loop 2 detik setelah onSceneReady
+    // (jika renderstart tidak fire dalam kasus AR.js tertentu)
+    setTimeout(function () {
+      if (!_animationLoopStarted) {
+        startAnimationLoop();
+      }
+    }, 2000);
+  }
   if (typeof THREE !== 'undefined') initLoaders();
   initMarkerListeners();
 }
