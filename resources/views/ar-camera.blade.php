@@ -16,6 +16,10 @@
 
   <style>
     body { margin: 0; overflow: hidden; background: #000; }
+    /* Force hide A-Frame VR/Enter VR button */
+    .a-enter-vr-button,
+    a-scene [icon-hide] { display: none !important; }
+    .a-loader-title { display: none !important; }
   </style>
 </head>
 <body>
@@ -52,7 +56,7 @@
 
 <a-scene
   embedded
-  arjs="detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+  arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
   renderer="logarithmicDepthBuffer: true; antialias: true;"
   vr-mode-ui="enabled: false"
   gesture-detector
@@ -101,11 +105,13 @@ document.addEventListener('DOMContentLoaded', function () {
   var scene = document.querySelector('a-scene');
   var overlay = document.getElementById('loading-overlay');
 
+  // Hide overlay once AR.js renderer starts drawing
   scene.addEventListener('arRendered', function () {
     overlay.style.display = 'none';
   });
 
-  setTimeout(function () { overlay.style.display = 'none'; }, 5000);
+  // Fallback: always hide overlay after 10s even if arRendered doesn't fire
+  setTimeout(function () { overlay.style.display = 'none'; }, 10000);
 
   document.querySelectorAll('a-marker').forEach(function (marker) {
     marker.addEventListener('markerFound', function () {
