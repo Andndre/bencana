@@ -69,6 +69,30 @@
   font-size:14px;z-index:1000;
 ">Kembali</a>
 
+    <button id="audio-toggle"
+        style="
+  position:absolute;bottom:20px;right:20px;
+  background:rgba(194,92,6,.9);border:none;border-radius:50%;
+  width:52px;height:52px;cursor:pointer;z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);
+" title="Toggle Audio">
+        <svg id="icon-audio-off" xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+            viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+        </svg>
+        <svg id="icon-audio-on" xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+            viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" style="display:none">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
+    </button>
+
     <a-scene embedded arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
         renderer="logarithmicDepthBuffer: true; antialias: true;" vr-mode-ui="enabled: false" gesture-detector
         id="scene" loading-screen="enabled: false">
@@ -81,7 +105,7 @@
                 data-audio-src="{{ $marker->path_audio ? '/storage/' . $marker->path_audio : '' }}"
                 data-model-scale="1 1 1" data-model-position="0 0.25 0">
                 <a-entity id="marker{{ $marker->marker_id }}-entity" position="0 0 0" scale="1 1 1" class="clickable"
-                    gesture-handler>
+                    gesture-handler marker-audio-handler="audioSrc: {{ $marker->path_audio ? '/storage/' . $marker->path_audio : '' }}"
                     @unless ($marker->path_model)
                         <a-box color="#c25c06" width="0.5" height="0.5" depth="0.5" position="0 0.25 0"
                             animation="property: rotation; to: 0 360 0; dur: 3000; loop: true; easing: linear"></a-box>
@@ -144,20 +168,6 @@
 
             document.querySelectorAll('a-marker').forEach(function(marker) {
                 marker.addEventListener('markerFound', function() {
-                    var audioSrc = parseMarkerModelData(marker).audioSrc;
-                    console.log('[ar-camera] markerFound:', marker.id, 'audioSrc:', audioSrc);
-                    if (audioSrc) {
-                        var cached = window._arAudioElements && window._arAudioElements.get(audioSrc);
-                        console.log('[ar-camera] cached audio element:', cached);
-                        if (cached) {
-                            console.log('[ar-camera] audio state:', {
-                                readyState: cached.readyState,
-                                paused: cached.paused,
-                                src: cached.src
-                            });
-                        }
-                    }
-
                     document.getElementById('marker-title').textContent = marker.getAttribute(
                         'data-marker-name');
                     document.getElementById('marker-description').textContent = marker.getAttribute(
