@@ -105,7 +105,7 @@
                 data-audio-src="{{ $marker->path_audio ? '/storage/' . $marker->path_audio : '' }}"
                 data-model-scale="1 1 1" data-model-position="0 0.25 0">
                 <a-entity id="marker{{ $marker->marker_id }}-entity" position="0 0 0" scale="1 1 1" class="clickable"
-                    gesture-handler marker-audio-handler="audioSrc: {{ $marker->path_audio ? '/storage/' . $marker->path_audio : '' }}"
+                    gesture-handler>
                     @unless ($marker->path_model)
                         <a-box color="#c25c06" width="0.5" height="0.5" depth="0.5" position="0 0.25 0"
                             animation="property: rotation; to: 0 360 0; dur: 3000; loop: true; easing: linear"></a-box>

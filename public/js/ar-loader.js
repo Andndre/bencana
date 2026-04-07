@@ -88,6 +88,19 @@ function preloadAudioForMarker(marker) {
   var audioSrc = parseMarkerModelData(marker).audioSrc;
   if (!audioSrc) return;
 
+  // Basic URL validation before attempting decode
+  var trimmed = audioSrc.trim();
+  if (!trimmed) {
+    console.warn('[ar-loader] Skipping empty audioSrc for marker:', marker.id);
+    return;
+  }
+  try {
+    new URL(trimmed); // throws if invalid relative/absolute URL
+  } catch(e) {
+    console.warn('[ar-loader] Invalid audioSrc URL — skipping preload:', audioSrc);
+    return;
+  }
+
   // Pre-decode ke AudioBuffer — dilakukan di background saat AR scene dimuat.
   // Setelah ini, playAudioWhenReady() akan langsung pakai cache (tanpa fetch lagi).
   decodeAudioToBuffer(audioSrc).then(function() {
@@ -119,14 +132,11 @@ function getAudioContext() {
 }
 
 // Set volume 0 (mute) atau 1 (unmute) via GainNode
+// Always updates audioMuted even if masterGain is null so UI state stays consistent
 function setMasterVolume(unmuted) {
-  if (!masterGain) return;
-  if (unmuted) {
-    masterGain.gain.setValueAtTime(1, audioContext.currentTime);
-    audioMuted = false;
-  } else {
-    masterGain.gain.setValueAtTime(0, audioContext.currentTime);
-    audioMuted = true;
+  audioMuted = !unmuted; // audioMuted = true when muting, false when unmuting
+  if (masterGain) {
+    masterGain.gain.setValueAtTime(unmuted ? 1 : 0, audioContext.currentTime);
   }
 }
 
@@ -218,18 +228,8 @@ function playAudioWhenReady(audioSrc, label, markerId) {
   });
 }
 
-// ── A-Frame Component: marker-audio-handler ───────────────────────────────────
-// Dummy component — audio playback ditangani langsung via playAudioWhenReady()
-// di markerFound/markerLost listeners (initMarkerListeners).
-AFRAME.registerComponent('marker-audio-handler', {
-  schema: {
-    audioSrc: { type: 'string', default: '' },
-  },
-
-  init: function () {
-    console.log('[ar-loader] marker-audio-handler init, audioSrc:', this.data.audioSrc);
-  },
-});
+// marker-audio-handler was removed — audio playback is fully owned by
+// playAudioWhenReady() called in initMarkerListeners (markerFound/markerLost).
 
 // ── Loading Overlay UI ────────────────────────────────────────────────────────
 function showLoading() {
