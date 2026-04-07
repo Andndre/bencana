@@ -11,7 +11,12 @@
 // ── State ────────────────────────────────────────────────────────────────────
 var markerVisibilityVersion = new Map(); // markerId → integer counter
 var modelStates = new Map();              // modelSrc → { loaded, object3D, animations }
-var audioElements = new Map();            // audioSrc → HTMLAudioElement
+var audioElements = new Map();            // audioSrc → HTMLAudioElement (legacy)
+var audioBufferCache = new Map();         // audioSrc → AudioBuffer
+var audioContext = null;                  // Web Audio API context (lazy init)
+var masterGain = null;                    // GainNode untuk mute/unmute via volume
+var activeAudioSources = new Map();      // markerId → { source, startedAt }
+var audioMuted = true;                    // default muted — user harus klik tombol untuk unmute
 window._arAudioElements = audioElements;  // debug: accessible from console
 var globalClock = null;
 var _arAnimationMixers = [];             // central mixer list, updated by scene component
@@ -81,35 +86,150 @@ function parseMarkerModelData(marker) {
 // ── Preload audio untuk satu marker ──────────────────────────────────────────
 function preloadAudioForMarker(marker) {
   var audioSrc = parseMarkerModelData(marker).audioSrc;
-  console.log('[ar-loader] preloadAudioForMarker called, audioSrc:', audioSrc);
-  if (!audioSrc) {
-    console.log('[ar-loader] No audioSrc, skipping');
-    return;
-  }
-  if (audioElements.has(audioSrc)) {
-    console.log('[ar-loader] Audio already cached:', audioSrc);
-    return;
-  }
+  if (!audioSrc) return;
 
-  console.log('[ar-loader] Creating new Audio element for:', audioSrc);
-  var audio = new Audio();
-  audio.src = audioSrc;
-  audio.preload = 'auto';
-
-  audio.addEventListener('canplay', function() {
-    console.log('[ar-loader] Audio ready:', audioSrc);
-  }, false);
-
-  audio.addEventListener('error', function(e) {
-    console.error('[ar-loader] Audio load failed:', audioSrc, 'error:', audio.error);
-  }, false);
-
-  audio.addEventListener('loadstart', function() {
-    console.log('[ar-loader] Audio load started:', audioSrc);
-  }, false);
-
-  audioElements.set(audioSrc, audio);
+  // Pre-decode ke AudioBuffer — dilakukan di background saat AR scene dimuat.
+  // Setelah ini, playAudioWhenReady() akan langsung pakai cache (tanpa fetch lagi).
+  decodeAudioToBuffer(audioSrc).then(function() {
+    console.log('[ar-loader] Audio pre-decoded:', audioSrc);
+  }).catch(function(e) {
+    console.error('[ar-loader] Audio pre-decode failed:', audioSrc, e);
+    // Fallback: simpan HTML Audio element untuk fallback path
+    if (!audioElements.has(audioSrc)) {
+      var audio = new Audio(audioSrc);
+      audio.preload = 'auto';
+      audioElements.set(audioSrc, audio);
+    }
+  });
 }
+
+// ── Web Audio API Manager ─────────────────────────────────────────────────────
+// Menggunakan Web Audio API decodeAudioData — bypasses browser autoplay policy
+// karena AudioBuffer sudah di-memory sebelum play() dipanggil.
+// Ini memperbaiki masalah: "audio tidak play di detection pertama".
+function getAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioContext.createGain();
+    masterGain.connect(audioContext.destination);
+    masterGain.gain.value = 0; // start muted
+    console.log('[ar-loader] AudioContext + GainNode created, muted');
+  }
+  return audioContext;
+}
+
+// Set volume 0 (mute) atau 1 (unmute) via GainNode
+function setMasterVolume(unmuted) {
+  if (!masterGain) return;
+  if (unmuted) {
+    masterGain.gain.setValueAtTime(1, audioContext.currentTime);
+    audioMuted = false;
+  } else {
+    masterGain.gain.setValueAtTime(0, audioContext.currentTime);
+    audioMuted = true;
+  }
+}
+
+// Stop audio source yang sedang playing untuk satu marker
+function stopMarkerAudio(markerId) {
+  var active = activeAudioSources.get(markerId);
+  if (active && active.source) {
+    try { active.source.stop(0); } catch(e) {}
+    activeAudioSources.delete(markerId);
+  }
+}
+
+// Decode audio file ke AudioBuffer (sekali saja, di-cache)
+function decodeAudioToBuffer(audioSrc) {
+  return new Promise(function(resolve, reject) {
+    // Sudah di-cache → langsung resolve
+    if (audioBufferCache.has(audioSrc)) {
+      resolve(audioBufferCache.get(audioSrc));
+      return;
+    }
+
+    fetch(audioSrc).then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.arrayBuffer();
+    }).then(function(arrayBuffer) {
+      var ctx = getAudioContext();
+      // Decode bisa throw synchronously jika format corrupt
+      try {
+        ctx.decodeAudioData(arrayBuffer, function(buffer) {
+          audioBufferCache.set(audioSrc, buffer);
+          console.log('[ar-loader] AudioBuffer decoded + cached:', audioSrc);
+          resolve(buffer);
+        }, function(err) {
+          reject(err);
+        });
+      } catch(e) {
+        reject(e);
+      }
+    }).catch(reject);
+  });
+}
+
+// ── Play audio: Web Audio API (preferred) + HTML Audio fallback ───────────────
+function playAudioWhenReady(audioSrc, label, markerId) {
+  label = label || 'marker';
+  var markerKey = markerId || audioSrc;
+
+  // Decode dulu (dari cache atau fetch baru), play.
+  // masterGain.setVolume(0/1) handle mute/unmute — tidak perlu skip here.
+  decodeAudioToBuffer(audioSrc).then(function(buffer) {
+    var ctx = getAudioContext();
+
+    // Jika context suspended, TUNGGU sampai benar-benar aktif SEBELUM play.
+    // ctx.resume() mengembalikan promise — promise.then(...) menjamin urutan.
+    var doPlay = function () {
+      // Stop source lama jika ada (prevent double audio)
+      stopMarkerAudio(markerKey);
+
+      var source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(masterGain); // 🔗 ke GainNode (bukan langsung ke destination)
+      source.start(0);
+
+      activeAudioSources.set(markerKey, { source: source });
+      console.log('[ar-loader] Audio playing (Web Audio API, ' + label + '):', audioSrc);
+    };
+
+    if (ctx.state === 'suspended') {
+      console.log('[ar-loader] AudioContext suspended — waiting for resume...');
+      ctx.resume().then(function () {
+        console.log('[ar-loader] AudioContext resumed — playing audio');
+        doPlay();
+      });
+    } else {
+      doPlay();
+    }
+
+  }).catch(function(e) {
+    console.error('[ar-loader] Web Audio failed, fallback to HTML Audio:', audioSrc, e);
+    // Fallback: HTML Audio (bisa kena autoplay block — tapi jika user sudah unmute,
+    // berarti ada gesture, jadi peluang berhasil lebih tinggi)
+    var cachedAudio = audioElements.get(audioSrc);
+    if (cachedAudio) {
+      cachedAudio.currentTime = 0;
+      cachedAudio.play().catch(function(err) {
+        console.error('[ar-loader] HTML Audio fallback also failed:', err);
+      });
+    }
+  });
+}
+
+// ── A-Frame Component: marker-audio-handler ───────────────────────────────────
+// Dummy component — audio playback ditangani langsung via playAudioWhenReady()
+// di markerFound/markerLost listeners (initMarkerListeners).
+AFRAME.registerComponent('marker-audio-handler', {
+  schema: {
+    audioSrc: { type: 'string', default: '' },
+  },
+
+  init: function () {
+    console.log('[ar-loader] marker-audio-handler init, audioSrc:', this.data.audioSrc);
+  },
+});
 
 // ── Loading Overlay UI ────────────────────────────────────────────────────────
 function showLoading() {
@@ -194,15 +314,6 @@ function loadGLB(modelSrc, markerId, visibilityVersion) {
 
         updateProgress(100);
 
-        // Download audio after GLB loaded
-        var audioSrc = parseMarkerModelData(document.getElementById(markerId)).audioSrc;
-        if (audioSrc && !audioElements.has(audioSrc)) {
-          var audio = new Audio();
-          audio.src = audioSrc;
-          audio.preload = 'auto';
-          audioElements.set(audioSrc, audio);
-        }
-
         resolve(gltf);
       },
       function (e) {
@@ -257,13 +368,20 @@ function initMarkerListeners() {
     var markerId = marker.id;
     var modelSrc = parseMarkerModelData(marker).modelSrc;
 
-    // Preload audio SEBELUM markerFound event — agar audio ready saat marker terdeteksi
+    // Pre-decode audio ke AudioBuffer saat AR scene ready
+    // Ini memastikan audio sudah di memory sebelum markerFound pertama kali fire
     preloadAudioForMarker(marker);
 
     marker.addEventListener('markerFound', function () {
       var version = bumpMarkerVisibilityVersion(markerId);
       showLoading();
       updateProgress(5);
+
+      // Play audio langsung saat marker terdeteksi — tidak perlu tunggu tick
+      var audioSrc = parseMarkerModelData(marker).audioSrc;
+      if (audioSrc) {
+        playAudioWhenReady(audioSrc, 'markerFound:' + markerId, markerId);
+      }
 
       attachModel(markerId, modelSrc);
 
@@ -290,73 +408,77 @@ function initMarkerListeners() {
         updateProgress(100);
         hideLoading();
       }
-
-      // Play audio when marker found
-      var audioSrc = parseMarkerModelData(marker).audioSrc;
-      console.log('[ar-loader] markerFound, audioSrc:', audioSrc);
-      console.log('[ar-loader] audioElements map size:', audioElements.size);
-      console.log('[ar-loader] audioElements keys:', Array.from(audioElements.keys()));
-      if (audioSrc) {
-        var audio = audioElements.get(audioSrc);
-        console.log('[ar-loader] cached audio element:', audio);
-        if (audio) {
-          console.log('[ar-loader] audio state before play:', {
-            readyState: audio.readyState,
-            paused: audio.paused,
-            src: audio.src
-          });
-          // Jika audio belum ready (buffering), buat element baru dan play langsung
-          if (audio.readyState < 2) { // HAVE_CURRENT_DATA = 2
-            console.log('[ar-loader] Audio not ready, creating fresh Audio...');
-            var freshAudio = new Audio(audioSrc);
-            freshAudio.preload = 'auto';
-            freshAudio.play().then(function() {
-              console.log('[ar-loader] Audio playing (fresh):', audioSrc);
-            }).catch(function(e) {
-              console.error('[ar-loader] Audio play failed (fresh):', e);
-              console.error('[ar-loader] freshAudio error name:', e.name, 'message:', e.message);
-            });
-          } else {
-            console.log('[ar-loader] Audio ready, playing cached...');
-            audio.currentTime = 0;
-            audio.play().catch(function(e) {
-              console.error('[ar-loader] Audio play failed:', e);
-              console.error('[ar-loader] audio error name:', e.name, 'message:', e.message);
-            });
-          }
-        } else {
-          console.warn('[ar-loader] Audio element not found in cache, creating new...');
-          var newAudio = new Audio(audioSrc);
-          newAudio.play().then(function() {
-            console.log('[ar-loader] Audio playing (new):', audioSrc);
-          }).catch(function(e) {
-            console.error('[ar-loader] Audio play failed (new):', e);
-          });
-        }
-      }
     });
 
     marker.addEventListener('markerLost', function () {
       bumpMarkerVisibilityVersion(markerId);
+
+      // Stop Web Audio source saat marker hilang
+      stopMarkerAudio(markerId);
+
+      // Pause HTML Audio fallback jika ada
+      var audioSrc = parseMarkerModelData(marker).audioSrc;
+      if (audioSrc) {
+        var audio = audioElements.get(audioSrc);
+        if (audio && !audio.paused) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      }
+
       detachModel(markerId);
       // Pause mixer saat marker hilang agar animasi tidak jalan saat model tidak terlihat
       var cached = modelStates.get(modelSrc);
       if (cached && cached.mixer) {
         cached.mixer.timeScale = 0;
       }
-
-      // Pause audio when marker lost
-      var audioSrc = parseMarkerModelData(marker).audioSrc;
-      if (audioSrc) {
-        var audio = audioElements.get(audioSrc);
-        if (audio) {
-          audio.pause();
-        }
-      }
     });
   });
 
   console.log('[ar-loader] ' + markers.length + ' marker(s) di-register');
+}
+
+// ── Audio Toggle Button ──────────────────────────────────────────────────────
+function initAudioToggle() {
+  var btn = document.getElementById('audio-toggle');
+  if (!btn) return;
+
+  var togglePending = false;
+
+  function updateIcon() {
+    var offIcon = document.getElementById('icon-audio-off');
+    var onIcon = document.getElementById('icon-audio-on');
+    if (!audioMuted) {
+      offIcon.style.display = 'none';
+      onIcon.style.display = 'block';
+      btn.style.background = 'rgba(0,140,0,.9)';
+    } else {
+      offIcon.style.display = 'block';
+      onIcon.style.display = 'none';
+      btn.style.background = 'rgba(194,92,6,.9)';
+    }
+  }
+
+  btn.addEventListener('click', function () {
+    if (togglePending) return; // antibounce
+    togglePending = true;
+    setTimeout(function () { togglePending = false; }, 300);
+
+    var nowUnmuting = audioMuted; // capture state before toggle
+    setMasterVolume(nowUnmuting); // true = unmute (gain=1), false = mute (gain=0)
+    updateIcon();
+    console.log('[ar-loader] Audio muted:', audioMuted);
+
+    if (nowUnmuting) {
+      // User gesture — resume AudioContext
+      var ctx = getAudioContext();
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(function () {
+          console.log('[ar-loader] AudioContext resumed after unmute');
+        });
+      }
+    }
+  });
 }
 
 // ── Boot ────────────────────────────────────────────────────────────────────
@@ -407,4 +529,5 @@ function onSceneReady() {
   }
   if (typeof THREE !== 'undefined') initLoaders();
   initMarkerListeners();
+  initAudioToggle();
 }
