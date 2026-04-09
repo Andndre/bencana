@@ -16,7 +16,7 @@ var audioBufferCache = new Map();         // audioSrc → AudioBuffer
 var audioContext = null;                  // Web Audio API context (lazy init)
 var masterGain = null;                    // GainNode untuk mute/unmute via volume
 var activeAudioSources = new Map();      // markerId → { source, startedAt }
-var audioMuted = true;                    // default muted — user harus klik tombol untuk unmute
+var audioMuted = false;                  // default unmuted
 window._arAudioElements = audioElements;  // debug: accessible from console
 var globalClock = null;
 var _arAnimationMixers = [];             // central mixer list, updated by scene component
@@ -125,8 +125,8 @@ function getAudioContext() {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = audioContext.createGain();
     masterGain.connect(audioContext.destination);
-    masterGain.gain.value = 0; // start muted
-    console.log('[ar-loader] AudioContext + GainNode created, muted');
+    masterGain.gain.value = audioMuted ? 0 : 1; // start unmuted (default)
+    console.log('[ar-loader] AudioContext + GainNode created, ' + (audioMuted ? 'muted' : 'unmuted'));
   }
   return audioContext;
 }
@@ -442,6 +442,9 @@ function initMarkerListeners() {
 function initAudioToggle() {
   var btn = document.getElementById('audio-toggle');
   if (!btn) return;
+
+  // Sinkronkan icon dengan state awal audio (penting untuk mobile: AudioContext lazy init)
+  updateIcon();
 
   var togglePending = false;
 
