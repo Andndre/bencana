@@ -169,6 +169,7 @@
 
             document.querySelectorAll('a-marker').forEach(function(marker) {
                 marker.addEventListener('markerFound', function() {
+                    console.log('[ar-camera] markerFound:', marker.id);
                     document.getElementById('marker-title').textContent = marker.getAttribute(
                         'data-marker-name');
                     document.getElementById('marker-description').textContent = marker.getAttribute(
