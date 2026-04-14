@@ -88,19 +88,6 @@ function preloadAudioForMarker(marker) {
   var audioSrc = parseMarkerModelData(marker).audioSrc;
   if (!audioSrc) return;
 
-  // Basic URL validation before attempting decode
-  var trimmed = audioSrc.trim();
-  if (!trimmed) {
-    console.warn('[ar-loader] Skipping empty audioSrc for marker:', marker.id);
-    return;
-  }
-  try {
-    new URL(trimmed); // throws if invalid relative/absolute URL
-  } catch(e) {
-    console.warn('[ar-loader] Invalid audioSrc URL — skipping preload:', audioSrc);
-    return;
-  }
-
   // Pre-decode ke AudioBuffer — dilakukan di background saat AR scene dimuat.
   // Setelah ini, playAudioWhenReady() akan langsung pakai cache (tanpa fetch lagi).
   decodeAudioToBuffer(audioSrc).then(function() {
@@ -211,6 +198,7 @@ function playAudioWhenReady(audioSrc, label, markerId) {
         doPlay();
       });
     } else {
+      console.log('[ar-loader] AudioContext running — playing audio now');
       doPlay();
     }
 
@@ -470,7 +458,7 @@ function initAudioToggle() {
     togglePending = true;
     setTimeout(function () { togglePending = false; }, 300);
 
-    setMasterVolume(!audioMuted); // pass inverse: wantUnmute = !audioMuted
+    setMasterVolume(audioMuted); // audioMuted=true → setMasterVolume(true) → unmute; audioMuted=false → mute
     updateIcon();
     console.log('[ar-loader] Audio muted:', audioMuted);
 
