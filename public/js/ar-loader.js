@@ -443,7 +443,10 @@ function initAudioToggle() {
   var btn = document.getElementById('audio-toggle');
   if (!btn) return;
 
-  // Sinkronkan icon dengan state awal audio (penting untuk mobile: AudioContext lazy init)
+  // Eager init AudioContext agar masterGain tersedia sebelum klik pertama
+  getAudioContext();
+
+  // Sinkronkan icon dengan state awal audio
   updateIcon();
 
   var togglePending = false;
@@ -463,23 +466,20 @@ function initAudioToggle() {
   }
 
   btn.addEventListener('click', function () {
-    if (togglePending) return; // antibounce
+    if (togglePending) return;
     togglePending = true;
     setTimeout(function () { togglePending = false; }, 300);
 
-    var nowUnmuting = audioMuted; // capture state before toggle
-    setMasterVolume(nowUnmuting); // true = unmute (gain=1), false = mute (gain=0)
+    setMasterVolume(!audioMuted); // pass inverse: wantUnmute = !audioMuted
     updateIcon();
     console.log('[ar-loader] Audio muted:', audioMuted);
 
-    if (nowUnmuting) {
-      // User gesture — resume AudioContext
-      var ctx = getAudioContext();
-      if (ctx.state === 'suspended') {
-        ctx.resume().then(function () {
-          console.log('[ar-loader] AudioContext resumed after unmute');
-        });
-      }
+    // User gesture — resume AudioContext (safe to call repeatedly)
+    var ctx = getAudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(function () {
+        console.log('[ar-loader] AudioContext resumed');
+      });
     }
   });
 }
