@@ -216,7 +216,7 @@ function playAudioWhenReady(audioSrc, label, markerId) {
                 stopMarkerAudio(markerKey);
 
                 // Add delay before playing audio
-                const delayTime = 0.5; // seconds
+                const delayTime = 1.5; // seconds
                 await new Promise((resolve) => {
                     setTimeout(resolve, delayTime * 1000);
                 });
