@@ -207,13 +207,19 @@ function playAudioWhenReady(audioSrc, label, markerId) {
 
             // Jika context suspended, TUNGGU sampai benar-benar aktif SEBELUM play.
             // ctx.resume() mengembalikan promise — promise.then(...) menjamin urutan.
-            var doPlay = function () {
+            var doPlay = async function () {
                 console.log(
                     "[ar-loader] doPlay() called — source.connect(masterGain), gain=",
                     masterGain.gain.value,
                 );
                 // Stop source lama jika ada (prevent double audio)
                 stopMarkerAudio(markerKey);
+
+                // Add delay before playing audio
+                const delayTime = 0.5; // seconds
+                await new Promise((resolve) => {
+                    setTimeout(resolve, delayTime * 1000);
+                });
 
                 var source = ctx.createBufferSource();
                 source.buffer = buffer;
@@ -436,7 +442,7 @@ function initMarkerListeners() {
 
             // Play audio langsung saat marker terdeteksi — tidak perlu tunggu tick
             var audioSrc = parseMarkerModelData(marker).audioSrc;
-            console.log('[ar-loader] markerFound audioSrc:', audioSrc);
+            console.log("[ar-loader] markerFound audioSrc:", audioSrc);
             if (audioSrc) {
                 playAudioWhenReady(
                     audioSrc,
