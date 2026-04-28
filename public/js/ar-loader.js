@@ -425,7 +425,7 @@ function detachModel(markerId) {
     var entity = marker.querySelector("a-entity");
     if (entity) entity.removeObject3D("dynamicModel");
 }
-// ── Pasang event listener ke marker ──────────────────────────────────────────
+
 function initMarkerListeners() {
     var markers = document.querySelectorAll("a-marker");
     if (!markers.length) {
@@ -437,11 +437,16 @@ function initMarkerListeners() {
         var markerId = marker.id;
         var modelSrc = parseMarkerModelData(marker).modelSrc;
 
+        // Variabel untuk melacak apakah marker ini SEDANG di layar
+        let isMarkerVisible = false;
+
         // Pre-decode audio ke AudioBuffer saat AR scene ready
-        // Ini memastikan audio sudah di memory sebelum markerFound pertama kali fire
         preloadAudioForMarker(marker);
 
         marker.addEventListener("markerFound", function () {
+            // Set status marker menjadi terlihat
+            isMarkerVisible = true;
+
             var version = bumpMarkerVisibilityVersion(markerId);
             showLoading();
             updateProgress(5);
@@ -452,11 +457,9 @@ function initMarkerListeners() {
                 audioSrc,
             );
 
-            // Fungsi pembantu untuk memutar audio
-            // Pastikan Anda menggunakan fungsi playAudioWhenReady yang sudah
-            // kita modifikasi sebelumnya (yang mendukung parameter delay)
             var triggerAudio = function () {
-                if (audioSrc) {
+                // Cek isMarkerVisible sebelum benar-benar memutar audio
+                if (audioSrc && isMarkerVisible) {
                     console.log(
                         "[ar-loader] Model siap, memutar audio:",
                         audioSrc,
@@ -466,6 +469,10 @@ function initMarkerListeners() {
                         "markerFound_Loaded:" + markerId,
                         markerId,
                     );
+                } else if (!isMarkerVisible) {
+                    console.log(
+                        "[ar-loader] Model selesai diload, tapi marker keburu hilang. Audio batal diputar.",
+                    );
                 }
             };
 
@@ -473,26 +480,20 @@ function initMarkerListeners() {
 
             var cached = modelStates.get(modelSrc);
             if (cached && cached.loaded) {
-                // KONDISI 1: Model sudah ada di cache dan langsung muncul
-
-                // Resume mixer animasi saat marker muncul lagi
                 if (cached.mixer) {
                     cached.mixer.timeScale = 1;
                 }
                 updateProgress(100);
                 hideLoading();
 
-                // Putar audio karena model sudah siap
                 triggerAudio();
             } else if (modelSrc) {
-                // KONDISI 2: Model baru di-load
-
                 loadGLB(modelSrc, markerId, version)
                     .then(function () {
                         updateProgress(100);
                         hideLoading();
 
-                        // Putar audio SETELAH model selesai dimuat
+                        // Fungsi ini sekarang aman dari race condition
                         triggerAudio();
                     })
                     .catch(function (err) {
@@ -503,10 +504,8 @@ function initMarkerListeners() {
                         );
                         updateProgress(100);
                         hideLoading();
-                        // Opsional: audio tidak diputar jika model gagal di-load
                     });
             } else {
-                // KONDISI 3: Marker tidak memiliki model, hanya audio saja
                 updateProgress(100);
                 hideLoading();
                 triggerAudio();
@@ -514,6 +513,9 @@ function initMarkerListeners() {
         });
 
         marker.addEventListener("markerLost", function () {
+            // Set status marker menjadi tidak terlihat
+            isMarkerVisible = false;
+
             bumpMarkerVisibilityVersion(markerId);
 
             // Stop Web Audio source saat marker hilang
@@ -530,7 +532,6 @@ function initMarkerListeners() {
             }
 
             detachModel(markerId);
-            // Pause mixer saat marker hilang agar animasi tidak jalan saat model tidak terlihat
             var cached = modelStates.get(modelSrc);
             if (cached && cached.mixer) {
                 cached.mixer.timeScale = 0;
