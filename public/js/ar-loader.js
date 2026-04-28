@@ -188,15 +188,14 @@ function decodeAudioToBuffer(audioSrc) {
     });
 }
 
-// ── Play audio: Web Audio API (preferred) + HTML Audio fallback ───────────────
-function playAudioWhenReady(audioSrc, label, markerId) {
+// Tambahkan parameter delayMs (default 0 jika tidak diisi)
+function playAudioWhenReady(audioSrc, label, markerId, delayMs = 1500) {
     label = label || "marker";
     var markerKey = markerId || audioSrc;
 
     // Decode dulu (dari cache atau fetch baru), play.
-    // masterGain.setVolume(0/1) handle mute/unmute — tidak perlu skip here.
     decodeAudioToBuffer(audioSrc)
-        .then(function (buffer) {
+        .then(async function (buffer) {
             var ctx = getAudioContext();
             console.log(
                 "[ar-loader] AudioBuffer ready, ctx.state:",
@@ -205,8 +204,6 @@ function playAudioWhenReady(audioSrc, label, markerId) {
                 masterGain.gain.value,
             );
 
-            // Jika context suspended, TUNGGU sampai benar-benar aktif SEBELUM play.
-            // ctx.resume() mengembalikan promise — promise.then(...) menjamin urutan.
             var doPlay = async function () {
                 console.log(
                     "[ar-loader] doPlay() called — source.connect(masterGain), gain=",
@@ -215,21 +212,27 @@ function playAudioWhenReady(audioSrc, label, markerId) {
                 // Stop source lama jika ada (prevent double audio)
                 stopMarkerAudio(markerKey);
 
-                // Add delay before playing audio
-                const delayTime = 1.5; // seconds
-                await new Promise((resolve) => {
-                    setTimeout(resolve, delayTime * 1000);
-                });
-
                 var source = ctx.createBufferSource();
                 source.buffer = buffer;
-                source.connect(masterGain); // 🔗 ke GainNode (bukan langsung ke destination)
-                source.start(0);
+                source.connect(masterGain);
+
+                // --- BAGIAN YANG DIUBAH ---
+                // Konversi milidetik ke detik karena Web Audio API menggunakan detik
+                var delayInSeconds = delayMs / 1000;
+
+                // Audio dijadwalkan untuk diputar di masa depan (waktu saat ini + delay)
+                source.start(ctx.currentTime + delayInSeconds);
+                // --------------------------
 
                 activeAudioSources.set(markerKey, { source: source });
                 console.log(
-                    "[ar-loader] Audio playing (Web Audio API, " + label + "):",
+                    "[ar-loader] Audio scheduled to play (Web Audio API, " +
+                        label +
+                        "):",
                     audioSrc,
+                    "with delay:",
+                    delayMs,
+                    "ms",
                 );
             };
 
@@ -256,17 +259,21 @@ function playAudioWhenReady(audioSrc, label, markerId) {
                 audioSrc,
                 e,
             );
-            // Fallback: HTML Audio (bisa kena autoplay block — tapi jika user sudah unmute,
-            // berarti ada gesture, jadi peluang berhasil lebih tinggi)
+
             var cachedAudio = audioElements.get(audioSrc);
             if (cachedAudio) {
-                cachedAudio.currentTime = 0;
-                cachedAudio.play().catch(function (err) {
-                    console.error(
-                        "[ar-loader] HTML Audio fallback also failed:",
-                        err,
-                    );
-                });
+                // Untuk fallback HTML Audio, karena kita menggunakan setTimeout,
+                // kita perlu hati-hati. Jika ingin aman, simpan timeout ID jika stopMarkerAudio memerlukannya.
+                // Namun untuk fallback sederhana, setTimeout biasa sudah cukup.
+                setTimeout(() => {
+                    cachedAudio.currentTime = 0;
+                    cachedAudio.play().catch(function (err) {
+                        console.error(
+                            "[ar-loader] HTML Audio fallback also failed:",
+                            err,
+                        );
+                    });
+                }, delayMs);
             }
         });
 }
