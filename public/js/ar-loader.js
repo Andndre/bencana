@@ -425,7 +425,6 @@ function detachModel(markerId) {
     var entity = marker.querySelector("a-entity");
     if (entity) entity.removeObject3D("dynamicModel");
 }
-
 // ── Pasang event listener ke marker ──────────────────────────────────────────
 function initMarkerListeners() {
     var markers = document.querySelectorAll("a-marker");
@@ -447,32 +446,54 @@ function initMarkerListeners() {
             showLoading();
             updateProgress(5);
 
-            // Play audio langsung saat marker terdeteksi — tidak perlu tunggu tick
             var audioSrc = parseMarkerModelData(marker).audioSrc;
-            console.log("[ar-loader] markerFound audioSrc:", audioSrc);
-            if (audioSrc) {
-                playAudioWhenReady(
-                    audioSrc,
-                    "markerFound:" + markerId,
-                    markerId,
-                );
-            }
+            console.log(
+                "[ar-loader] markerFound mendeteksi audioSrc:",
+                audioSrc,
+            );
+
+            // Fungsi pembantu untuk memutar audio
+            // Pastikan Anda menggunakan fungsi playAudioWhenReady yang sudah
+            // kita modifikasi sebelumnya (yang mendukung parameter delay)
+            var triggerAudio = function () {
+                if (audioSrc) {
+                    console.log(
+                        "[ar-loader] Model siap, memutar audio:",
+                        audioSrc,
+                    );
+                    playAudioWhenReady(
+                        audioSrc,
+                        "markerFound_Loaded:" + markerId,
+                        markerId,
+                    );
+                }
+            };
 
             attachModel(markerId, modelSrc);
 
             var cached = modelStates.get(modelSrc);
             if (cached && cached.loaded) {
+                // KONDISI 1: Model sudah ada di cache dan langsung muncul
+
                 // Resume mixer animasi saat marker muncul lagi
                 if (cached.mixer) {
                     cached.mixer.timeScale = 1;
                 }
                 updateProgress(100);
                 hideLoading();
+
+                // Putar audio karena model sudah siap
+                triggerAudio();
             } else if (modelSrc) {
+                // KONDISI 2: Model baru di-load
+
                 loadGLB(modelSrc, markerId, version)
                     .then(function () {
                         updateProgress(100);
                         hideLoading();
+
+                        // Putar audio SETELAH model selesai dimuat
+                        triggerAudio();
                     })
                     .catch(function (err) {
                         console.error(
@@ -482,10 +503,13 @@ function initMarkerListeners() {
                         );
                         updateProgress(100);
                         hideLoading();
+                        // Opsional: audio tidak diputar jika model gagal di-load
                     });
             } else {
+                // KONDISI 3: Marker tidak memiliki model, hanya audio saja
                 updateProgress(100);
                 hideLoading();
+                triggerAudio();
             }
         });
 
