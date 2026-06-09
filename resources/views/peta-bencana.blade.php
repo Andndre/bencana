@@ -31,7 +31,7 @@
             <!-- Header -->
             <div class="z-1000 relative flex w-full items-center justify-center bg-[#ffac00] px-4 py-3 shadow-md">
                 <a href="{{ route('home') }}" class="absolute left-4">
-                    <img src="{{ asset('images/info.webp') }}" alt="Kembali" class="w-8 rotate-180">
+                    <img src="{{ asset('images/left-arrow.webp') }}" alt="" class="w-4">
                 </a>
                 <h1 class="text-center text-xl font-extrabold tracking-wide text-[#800000]">PETA BENCANA</h1>
             </div>
