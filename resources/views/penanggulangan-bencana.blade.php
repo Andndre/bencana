@@ -15,6 +15,9 @@
 
         <!-- Header -->
         <div class="relative z-10 flex w-full shrink-0 items-center justify-center bg-[#ffac00] px-4 py-3 shadow-md">
+            <a href="{{ route('home') }}" class="absolute left-4 flex items-center">
+                <img src="{{ asset('images/left-arrow.webp') }}" alt="Back" class="w-4">
+            </a>
             <h1 class="text-center text-xl font-extrabold tracking-wide text-[#800000]">PENANGGULANGAN BENCANA</h1>
         </div>
 
