@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @mixin IdeHelperDisasterLocation
+ */
 class DisasterLocation extends Model
 {
     protected $fillable = ['disaster_id', 'location_name', 'latitude', 'longitude'];
