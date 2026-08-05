@@ -19,7 +19,8 @@
     <div class="lg:col-span-2 flex flex-col lg:h-full">
 
         {{-- Map --}}
-        <div id="map-card" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col flex-1">
+        {{-- relative z-0: kurung z-index internal Leaflet (sampai 1000) supaya tidak menimpa sidebar --}}
+        <div id="map-card" class="relative z-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col flex-1">
 
             {{-- Search + GPS --}}
             <div class="border-b border-gray-200 p-3 space-y-2">
