@@ -92,8 +92,11 @@
                                         class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#c25c06] focus:outline-none focus:ring-2 focus:ring-[#c25c06]/20">
                                     <button type="button"
                                         onclick="deleteStep(this, '{{ route('admin.disasters.steps.destroy', $step) }}')"
-                                        class="rounded-lg border border-red-200 bg-white px-2.5 py-2 text-xs font-semibold text-red-500 hover:bg-red-50 hover:border-red-400 transition-colors flex-shrink-0">
-                                        ✕
+                                        class="rounded-lg border border-red-200 bg-white p-2.5 text-xs font-semibold text-red-500 hover:bg-red-50 hover:border-red-400 transition-colors flex-shrink-0"
+                                        title="Hapus langkah">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
                                     </button>
                                 </div>
                             @endforeach
@@ -156,7 +159,7 @@
         row.innerHTML =
             '<input type="text" readonly' +
             ' class="flex-1 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm text-gray-700 cursor-default">' +
-            '<button type="button" class="rounded-lg border border-red-200 bg-white px-2.5 py-2 text-xs font-semibold text-red-500 hover:bg-red-50 flex-shrink-0">✕</button>';
+            '<button type="button" class="rounded-lg border border-red-200 bg-white p-2.5 text-xs font-semibold text-red-500 hover:bg-red-50 flex-shrink-0" title="Hapus langkah"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>';
         row.querySelector('input').value = value;
         row.querySelector('button').addEventListener('click', function() {
             hidden.remove();
