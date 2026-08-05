@@ -39,6 +39,26 @@
         wrap.classList.remove('hidden');
     }
 
+    // model-viewer hanya memutar satu klip animasi, sedangkan /ar-kamera memutar semuanya
+    // sekaligus. Ambil ModelScene internal lewat simbolnya lalu jalankan semua klip di
+    // mixer yang sama supaya preview sama dengan tampilan AR.
+    (function() {
+        var viewer = document.getElementById('model-viewer');
+        if (!viewer) return;
+
+        viewer.addEventListener('load', function() {
+            var key = Object.getOwnPropertySymbols(viewer).find(function(s) {
+                return s.description === 'scene';
+            });
+            var scene = key && viewer[key];
+            if (!scene || !scene.animations || !scene.mixer) return;
+
+            scene.animations.forEach(function(clip) {
+                scene.mixer.clipAction(clip, scene).play();
+            });
+        });
+    })();
+
     // Upload dengan progress bar; XHR mengikuti redirect Laravel lewat responseURL.
     (function() {
         var form = document.getElementById('marker-form');
