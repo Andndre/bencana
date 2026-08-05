@@ -157,7 +157,8 @@
         @foreach ($arMarkers as $marker)
             <a-marker type="pattern" url="/storage/{{ $marker->path_patt }}" raycaster="objects: .clickable"
                 emitevents="true" cursor="fuse: false; rayOrigin: mouse;" id="marker{{ $marker->marker_id }}"
-                data-marker-name="{{ $marker->nama }}" data-disaster-name="{{ $marker->disaster?->name ?? '' }}"
+                data-marker-name="{{ $marker->nama }}" data-marker-code="{{ $marker->marker_code ?? '' }}"
+                data-disaster-name="{{ $marker->disaster?->name ?? '' }}"
                 data-disaster-description="{{ $marker->disaster?->description ?? '' }}"
                 data-model-src="{{ $marker->path_model ? '/storage/' . $marker->path_model : '' }}"
                 data-audio-src="{{ $marker->path_audio ? '/storage/' . $marker->path_audio : '' }}"

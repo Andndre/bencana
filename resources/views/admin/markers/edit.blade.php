@@ -17,10 +17,15 @@
 
         <form method="POST" action="{{ route('admin.markers.update', $marker) }}" enctype="multipart/form-data"
             id="marker-form" data-redirect="{{ route('admin.markers.index') }}"
+            data-preview-url="{{ route('admin.markers.preview') }}"
             class="space-y-5 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             @csrf
             @method('PUT')
+
+            @include('admin.markers._mode-selector', [
+                'mode' => old('mode', $marker->path_logo_tengah ? 'auto' : 'custom'),
+            ])
 
             <div>
                 <label class="mb-1.5 block text-sm font-semibold text-gray-700">Nama Marker <span
@@ -35,11 +40,11 @@
 
             <div>
                 <label class="mb-1.5 block text-sm font-semibold text-gray-700">Bencana</label>
-                <select name="disaster_id"
+                <select name="disaster_id" id="disaster_id"
                     class="@error('disaster_id') @enderror w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-[#c25c06] focus:outline-none focus:ring-2 focus:ring-[#c25c06]/20">
                     <option value="">-- Pilih Bencana --</option>
                     @foreach ($disasters as $disaster)
-                        <option value="{{ $disaster->id }}"
+                        <option value="{{ $disaster->id }}" data-slug="{{ $disaster->slug }}"
                             {{ old('disaster_id', $marker->disaster_id) == $disaster->id ? 'selected' : '' }}>
                             {{ $disaster->name }}
                         </option>
@@ -51,6 +56,55 @@
             </div>
 
             <div>
+                <label class="mb-1.5 block text-sm font-semibold text-gray-700">Marker ID</label>
+                <input type="text" name="marker_code" id="marker_code"
+                    value="{{ old('marker_code', $marker->marker_code) }}" placeholder="Contoh: MRK-BANJIR-01"
+                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 uppercase placeholder-gray-400 focus:border-[#c25c06] focus:ring-2 focus:ring-[#c25c06]/20 focus:outline-none">
+                <p class="mt-1 text-xs text-gray-400">Kode unik marker. Huruf, angka, tanda hubung dan garis bawah.</p>
+                @error('marker_code')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div id="section-auto">
+                <label class="mb-1.5 block text-sm font-semibold text-gray-700">Logo / Simbol Tengah (PNG)</label>
+                <div id="logo-drop-zone"
+                    class="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-[#c25c06]">
+                    <input type="file" name="path_logo_tengah" id="path_logo_tengah" accept="image/png" class="hidden"
+                        onchange="previewLogoFile(this)">
+                    <label for="path_logo_tengah" class="flex cursor-pointer flex-col items-center gap-3">
+                        <div id="logo-preview-container" @if (!$marker->path_logo_tengah) class="hidden" @endif>
+                            <img id="logo-preview-image"
+                                src="{{ $marker->path_logo_tengah ? Storage::disk('public')->url($marker->path_logo_tengah) : '' }}"
+                                class="mx-auto max-h-32 rounded-lg border border-gray-200 bg-gray-50">
+                        </div>
+                        <div id="logo-placeholder" @if ($marker->path_logo_tengah) class="hidden" @endif>
+                            <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p class="mt-2 text-sm text-gray-500">Klik untuk pilih logo PNG transparan atau drag & drop</p>
+                        </div>
+                    </label>
+                </div>
+                <p id="logo-file-info" class="mt-1 text-xs text-gray-500"></p>
+                <p class="mt-2 text-xs text-gray-400">Kosongkan jika tidak ingin mengganti logo. PNG transparan, maksimal
+                    2MB.</p>
+                @error('path_logo_tengah')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+
+                <div id="marker-preview-wrap" @if (!$marker->path_gambar_marker) class="mt-4 hidden" @else class="mt-4" @endif>
+                    <p class="mb-1.5 text-sm font-semibold text-gray-700">Preview Marker</p>
+                    <img id="marker-preview-image"
+                        src="{{ $marker->path_gambar_marker ? Storage::disk('public')->url($marker->path_gambar_marker) : '' }}"
+                        class="mx-auto max-h-64 rounded-lg border border-gray-200 bg-gray-50 p-2">
+                    <p id="marker-preview-status" class="mt-1 text-center text-xs text-gray-400"></p>
+                </div>
+            </div>
+
+            <div id="section-custom">
                 <label class="mb-1.5 block text-sm font-semibold text-gray-700">Gambar Marker AR</label>
                 <div id="marker-drop-zone"
                     class="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-[#c25c06]">
@@ -138,7 +192,7 @@
                             <svg class="mx-auto h-10 w-10 text-green-500" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 19V6l12-3m0 0l-9-3m9 3v12m-9-3l9 3m-9-3l9 3" />
+                                    d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
                             </svg>
                             <p id="audio-filename" class="mt-2 text-sm font-medium text-green-600">
                                 {{ $marker->path_audio ? basename($marker->path_audio) : '' }}
@@ -148,7 +202,7 @@
                             <svg class="mx-auto h-10 w-10 text-gray-300" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                    d="M9 19V6l12-3m0 0l-9-3m9 3v12m-9-3l9 3m-9-3l9 3" />
+                                    d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
                             </svg>
                             <p class="mt-2 text-sm text-gray-500">Klik untuk pilih file audio (opsional)</p>
                         </div>
@@ -320,4 +374,5 @@
     </script>
 
     @include('admin.markers._upload-js')
+    @include('admin.markers._form-js')
 @endsection

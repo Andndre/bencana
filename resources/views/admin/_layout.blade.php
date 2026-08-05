@@ -68,6 +68,15 @@
                     </svg>
                     Marker AR
                 </a>
+
+                <a href="{{ route('admin.modul') }}"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('admin.modul*') ? 'bg-[#ffac00] text-[#800000]' : 'text-white/80 hover:bg-white/10 hover:text-white' }}">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6M9 17h4"/>
+                    </svg>
+                    Modul PDF
+                </a>
             </nav>
 
             {{-- User / Logout --}}

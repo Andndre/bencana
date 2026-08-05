@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ArMarkerController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ModulController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +29,13 @@ Route::get('/ar-markers/download', [
     ArMarkerController::class,
     'downloadZip',
 ])->name('ar-markers.download');
+Route::get('/modul-bencana', [ModulController::class, 'show'])->name(
+    'modul.show',
+);
+Route::get('/modul-bencana/download', [
+    ModulController::class,
+    'download',
+])->name('modul.download');
 
 Route::middleware('auth')
     ->prefix('admin')
@@ -107,6 +115,19 @@ Route::middleware('auth')
             ArMarkerController::class,
             'destroy',
         ])->name('admin.markers.destroy');
+        Route::post('/markers/preview', [
+            ArMarkerController::class,
+            'preview',
+        ])->name('admin.markers.preview');
+        Route::get('/modul', [ModulController::class, 'admin'])->name(
+            'admin.modul',
+        );
+        Route::post('/modul', [ModulController::class, 'store'])->name(
+            'admin.modul.store',
+        );
+        Route::delete('/modul', [ModulController::class, 'destroy'])->name(
+            'admin.modul.destroy',
+        );
     });
 
 Route::middleware('auth')->group(function () {

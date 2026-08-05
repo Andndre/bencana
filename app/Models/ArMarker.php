@@ -19,7 +19,9 @@ class ArMarker extends Model
     protected $fillable = [
         'disaster_id',
         'nama',
+        'marker_code',
         'path_gambar_marker',
+        'path_logo_tengah',
         'path_patt',
         'path_model',
         'path_audio',

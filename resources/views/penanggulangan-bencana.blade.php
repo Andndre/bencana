@@ -102,6 +102,8 @@
 
         <!-- Bottom Navigation Bar -->
         <div class="relative z-20 shrink-0 bg-[#ffac00] px-4 py-3">
+            @include('partials.modul-buttons', ['compact' => true])
+
             <!-- Disaster title -->
             <div class="mb-2 flex items-center justify-center">
                 <h3 id="nav-title" class="text-center text-base font-extrabold text-[#800000]">
@@ -128,6 +130,8 @@
                 </button>
             </div>
         </div>
+
+        @include('partials.modul-overlay')
 
     </div>
 

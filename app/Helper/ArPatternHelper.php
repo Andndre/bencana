@@ -98,6 +98,125 @@ class ArPatternHelper
         return $pngBinary ?: throw new RuntimeException('Gagal mengenkode marker AR ke PNG.');
     }
 
+    /** Sisi grid modul pada sumber marker (ganjil supaya area logo simetris). */
+    private const GRID = 11;
+
+    /** Lebar satu modul dalam pixel. Ukuran sumber = GRID * MODULE. */
+    private const MODULE = 28;
+
+    /**
+     * Susun sumber marker auto-generate: pola modul mirip QR dengan logo besar di tengah.
+     *
+     * Layout grid 11×11 modul:
+     *   - cincin terluar dibiarkan putih (quiet zone, supaya pola tidak menyatu
+     *     dengan bingkai hitam yang ditambahkan buildFullMarkerPng)
+     *   - tiga kotak "mata" di pojok kiri-atas, kanan-atas, kiri-bawah — pojok
+     *     kanan-bawah sengaja dikosongkan supaya orientasi marker tidak ambigu
+     *     (AR.js mencocokkan pola pada 4 rotasi)
+     *   - 5×5 modul di tengah untuk logo
+     *   - sisanya diisi hitam/putih dari hash $seed, jadi tiap Marker ID punya
+     *     pola unik tapi selalu sama setiap kali digenerate ulang
+     *
+     * Method terpisah dari buildFullMarkerPng() karena butuh alpha blending
+     * (PNG transparan kalau tidak jadi artefak hitam) dan menjaga rasio aspek logo.
+     *
+     * Hasilnya dipakai sebagai input encodeImageToPattern() + buildFullMarkerPng().
+     */
+    public static function buildLogoMarkerSource(string $logoPath, string $seed = ''): string
+    {
+        self::ensureGdAvailable();
+
+        $grid = self::GRID;
+        $module = self::MODULE;
+        $size = $grid * $module;
+
+        $logo = self::loadImage($logoPath);
+        $canvas = imagecreatetruecolor($size, $size);
+
+        try {
+            $white = imagecolorallocate($canvas, 255, 255, 255);
+            $black = imagecolorallocate($canvas, 0, 0, 0);
+            imagefilledrectangle($canvas, 0, 0, $size - 1, $size - 1, $white);
+
+            // Area logo: 5×5 modul di tengah (indeks 3..7 pada grid 11).
+            $logoFrom = (int) (($grid - 5) / 2);
+            $logoTo = $logoFrom + 4;
+
+            // Mata QR 2×2 modul di tiga pojok area aktif (indeks 1..9).
+            $eyes = [[1, 1], [1, $grid - 3], [$grid - 3, 1]];
+
+            $bits = self::patternBits($seed);
+            $bit = 0;
+
+            for ($row = 1; $row < $grid - 1; $row++) {
+                for ($col = 1; $col < $grid - 1; $col++) {
+                    if ($row >= $logoFrom && $row <= $logoTo && $col >= $logoFrom && $col <= $logoTo) {
+                        continue;
+                    }
+
+                    $isEye = false;
+                    foreach ($eyes as [$eyeRow, $eyeCol]) {
+                        if ($row >= $eyeRow && $row <= $eyeRow + 1 && $col >= $eyeCol && $col <= $eyeCol + 1) {
+                            $isEye = true;
+                            break;
+                        }
+                    }
+
+                    $fill = $isEye || ($bits[$bit++ % strlen($bits)] === '1');
+                    if ($fill) {
+                        imagefilledrectangle(
+                            $canvas,
+                            $col * $module, $row * $module,
+                            ($col + 1) * $module - 1, ($row + 1) * $module - 1,
+                            $black
+                        );
+                    }
+                }
+            }
+
+            // Logo menutupi seluruh area 5×5 modul, rasio aspek dijaga.
+            imagealphablending($canvas, true);
+            $box = 5 * $module;
+            $logoW = imagesx($logo);
+            $logoH = imagesy($logo);
+            $scale = min($box / $logoW, $box / $logoH);
+            $targetW = max(1, (int) round($logoW * $scale));
+            $targetH = max(1, (int) round($logoH * $scale));
+            $originX = $logoFrom * $module;
+
+            // Latar putih di bawah logo supaya logo transparan tetap kontras.
+            imagefilledrectangle($canvas, $originX, $originX, $originX + $box - 1, $originX + $box - 1, $white);
+            imagecopyresampled(
+                $canvas, $logo,
+                $originX + (int) round(($box - $targetW) / 2),
+                $originX + (int) round(($box - $targetH) / 2),
+                0, 0,
+                $targetW, $targetH,
+                $logoW, $logoH
+            );
+
+            ob_start();
+            imagepng($canvas);
+            $pngBinary = ob_get_clean();
+
+            return $pngBinary ?: throw new RuntimeException('Gagal menyusun marker dari logo.');
+        } finally {
+            imagedestroy($canvas);
+            imagedestroy($logo);
+        }
+    }
+
+    /** Deret bit deterministik dari seed; seed kosong tetap menghasilkan pola valid. */
+    private static function patternBits(string $seed): string
+    {
+        $bits = '';
+        foreach (str_split(hash('sha256', $seed), 1) as $hex) {
+            $bits .= str_pad(base_convert($hex, 16, 2), 4, '0', STR_PAD_LEFT);
+        }
+
+        return $bits;
+    }
+
     // --- private helpers ---
 
     private static function ensureGdAvailable(): void

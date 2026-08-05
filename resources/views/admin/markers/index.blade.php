@@ -22,6 +22,7 @@
             <thead class="bg-gray-50 border-b border-gray-200">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Nama Marker</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Kode</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Bencana</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">File .patt</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Model 3D (.glb)</th>
@@ -33,6 +34,13 @@
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4">
                             <div class="font-semibold text-gray-900">{{ $marker->nama ?? '-' }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            @if ($marker->marker_code)
+                                <code class="rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">{{ $marker->marker_code }}</code>
+                            @else
+                                <span class="text-xs text-gray-400">-</span>
+                            @endif
                         </td>
                         <td class="px-6 py-4">
                             <span class="inline-flex items-center rounded-full bg-[#c25c06]/10 px-3 py-1 text-xs font-semibold text-[#c25c06]">
@@ -83,7 +91,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-400">
                             <div class="flex flex-col items-center gap-2">
                                 <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>

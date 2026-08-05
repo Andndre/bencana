@@ -31,7 +31,7 @@
             <!-- Logo -->
             <img src="{{ asset('images/logo.webp') }}" alt="BENCANA Logo" class="w-54 mt-42 relative z-10">
 
-            <div class="absolute bottom-[22%] left-1/2 flex w-full max-w-80 -translate-x-1/2 flex-col gap-2 px-4">
+            <div class="absolute bottom-[15%] left-1/2 flex w-full max-w-80 -translate-x-1/2 flex-col gap-2 px-4">
 
                 <a href="{{ route('ar-markers.download') }}" class="group relative block">
                     <img src="{{ asset('images/button.webp') }}" alt="Download Marker"
@@ -49,7 +49,11 @@
                         AR</span>
                 </a>
 
+                @include('partials.modul-buttons')
+
             </div>
+
+            @include('partials.modul-overlay')
         </div>
 
     </div>
