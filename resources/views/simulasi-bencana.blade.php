@@ -33,7 +33,9 @@
 
             <div class="absolute bottom-[15%] left-1/2 flex w-full max-w-80 -translate-x-1/2 flex-col gap-2 px-4">
 
-                <a href="{{ route('ar-markers.download') }}" class="group relative block">
+                {{-- PDF marker menggantikan ZIP kalau admin sudah mengunggahnya. --}}
+                <a href="{{ \App\Http\Controllers\ModulController::available() ? route('modul.download') : route('ar-markers.download') }}"
+                    class="group relative block">
                     <img src="{{ asset('images/button.webp') }}" alt="Download Marker"
                         class="block w-full brightness-100 transition-transform duration-200 group-hover:scale-105 group-hover:brightness-110 group-active:scale-95">
                     <span
@@ -49,11 +51,7 @@
                         AR</span>
                 </a>
 
-                @include('partials.modul-buttons')
-
             </div>
-
-            @include('partials.modul-overlay')
         </div>
 
     </div>

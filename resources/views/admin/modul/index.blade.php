@@ -1,8 +1,8 @@
 @extends('admin._layout')
 
-@section('title', 'Modul PDF')
-@section('page-title', 'Modul PDF')
-@section('page-subtitle', 'Materi bacaan + gambar marker AR siap cetak dalam satu file PDF')
+@section('title', 'PDF Marker')
+@section('page-title', 'PDF Marker')
+@section('page-subtitle', 'Materi bacaan + gambar marker AR siap cetak, diunduh dari tombol Download Marker')
 
 @section('content')
 
@@ -55,7 +55,7 @@
                             Buka di tab baru
                         </a>
                         <form method="POST" action="{{ route('admin.modul.destroy') }}"
-                            onsubmit="return confirm('Hapus modul PDF? Tombol modul akan hilang dari halaman publik.')">
+                            onsubmit="return confirm('Hapus PDF Marker? Tombol Download Marker akan kembali mengunduh ZIP marker.')">
                             @csrf
                             @method('DELETE')
                             <button type="submit"
@@ -67,10 +67,10 @@
                 @else
                     <span
                         class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
-                        Belum ada modul
+                        Belum ada PDF Marker
                     </span>
                     <p class="mt-3 text-sm text-gray-500">
-                        Tombol "Baca Modul" belum muncul di halaman publik sampai file diunggah.
+                        Tombol "Download Marker" di halaman publik masih mengunduh ZIP marker sampai file ini diunggah.
                     </p>
                 @endif
             </div>
@@ -94,7 +94,7 @@
 
                     <button type="submit"
                         class="w-full rounded-lg bg-[#c25c06] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#a04a05]">
-                        {{ $exists ? 'Ganti Modul' : 'Unggah Modul' }}
+                        {{ $exists ? 'Ganti PDF' : 'Unggah PDF' }}
                     </button>
                 </form>
             </div>
@@ -107,7 +107,7 @@
                     <h3 class="font-bold text-gray-800">Preview</h3>
                 </div>
                 @if ($exists)
-                    <iframe src="{{ route('modul.show') }}" title="Preview Modul PDF"
+                    <iframe src="{{ route('modul.show') }}" title="Preview PDF Marker"
                         class="min-h-125 w-full flex-1 bg-gray-100"></iframe>
                 @else
                     <div class="min-h-75 flex flex-1 items-center justify-center text-sm text-gray-400">

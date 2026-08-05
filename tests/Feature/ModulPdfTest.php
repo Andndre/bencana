@@ -44,21 +44,34 @@ class ModulPdfTest extends TestCase
         $this->get(route('modul.download'))->assertNotFound();
     }
 
-    public function test_public_pages_show_modul_buttons_only_when_pdf_exists(): void
+    public function test_download_marker_button_uses_pdf_when_available(): void
     {
         Storage::fake('public');
 
-        $this->get(route('simulasi-bencana'))->assertOk()->assertDontSee('btn-baca-modul');
-        $this->get(route('penanggulangan-bencana'))->assertOk()->assertDontSee('btn-baca-modul');
+        $this->get(route('simulasi-bencana'))
+            ->assertOk()
+            ->assertSee(route('ar-markers.download'))
+            ->assertDontSee(route('modul.download'));
 
         Storage::disk('public')->put(ModulController::PATH, 'dummy');
 
-        foreach (['simulasi-bencana', 'penanggulangan-bencana'] as $page) {
-            $this->get(route($page))
-                ->assertOk()
-                ->assertSee('btn-baca-modul')
-                ->assertSee('modul-overlay');
-        }
+        $this->get(route('simulasi-bencana'))
+            ->assertOk()
+            ->assertSee(route('modul.download'))
+            ->assertDontSee(route('ar-markers.download'));
+    }
+
+    public function test_download_sends_the_pdf_as_attachment(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put(ModulController::PATH, 'dummy');
+
+        $this->get(route('modul.download'))
+            ->assertOk()
+            ->assertHeader(
+                'content-disposition',
+                'attachment; filename='.ModulController::FILENAME
+            );
     }
 
     public function test_non_pdf_upload_is_rejected(): void

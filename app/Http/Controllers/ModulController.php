@@ -12,9 +12,9 @@ class ModulController extends Controller
     // banyak PDF, PDF per-bencana, atau riwayat versi.
     public const PATH = 'ar-markers/modul/modul-bencana.pdf';
 
-    public const FILENAME = 'Modul-Bencana.pdf';
+    public const FILENAME = 'Marker-Bencana.pdf';
 
-    /** Dipakai view publik untuk memutuskan apakah tombol modul dirender. */
+    /** Dipakai view publik: tombol Download Marker pakai PDF ini kalau ada. */
     public static function available(): bool
     {
         return Storage::disk('public')->exists(self::PATH);
@@ -44,7 +44,7 @@ class ModulController extends Controller
         );
 
         return redirect()->route('admin.modul')
-            ->with('success', 'Modul PDF berhasil diunggah.');
+            ->with('success', 'PDF Marker berhasil diunggah.');
     }
 
     public function destroy()
@@ -52,7 +52,7 @@ class ModulController extends Controller
         Storage::disk('public')->delete(self::PATH);
 
         return redirect()->route('admin.modul')
-            ->with('success', 'Modul PDF berhasil dihapus.');
+            ->with('success', 'PDF Marker berhasil dihapus.');
     }
 
     /** Streaming inline — dipakai <iframe> preview. */
