@@ -166,7 +166,7 @@
                     </label>
                 </div>
                 <div id="model-viewer-wrap" class="mt-3 @unless ($marker->path_model) hidden @endunless">
-                    <model-viewer id="model-viewer" camera-controls auto-rotate shadow-intensity="1"
+                    <model-viewer id="model-viewer" camera-controls auto-rotate autoplay shadow-intensity="1"
                         src="{{ $marker->path_model ? asset('storage/' . $marker->path_model) : '' }}"
                         class="h-64 w-full rounded-lg border border-gray-200 bg-gray-50"></model-viewer>
                     <p class="mt-1 text-xs text-gray-400">Geser untuk memutar model, scroll untuk zoom.</p>

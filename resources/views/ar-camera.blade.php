@@ -128,7 +128,7 @@
 
     <button id="audio-toggle"
         style="
-  position:absolute;bottom:20px;right:20px;
+  position:absolute;top:15px;left:15px;
   background:rgba(0,140,0,.9);border:none;border-radius:50%;
   width:52px;height:52px;cursor:pointer;z-index:1000;
   display:flex;align-items:center;justify-content:center;

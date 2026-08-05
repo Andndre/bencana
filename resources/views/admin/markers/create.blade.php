@@ -157,7 +157,7 @@
                     </label>
                 </div>
                 <div id="model-viewer-wrap" class="mt-3 hidden">
-                    <model-viewer id="model-viewer" camera-controls auto-rotate shadow-intensity="1"
+                    <model-viewer id="model-viewer" camera-controls auto-rotate autoplay shadow-intensity="1"
                         class="h-64 w-full rounded-lg border border-gray-200 bg-gray-50"></model-viewer>
                     <p class="mt-1 text-xs text-gray-400">Geser untuk memutar model, scroll untuk zoom.</p>
                 </div>
