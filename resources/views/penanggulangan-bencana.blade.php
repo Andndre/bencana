@@ -10,8 +10,8 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 
-<body class="flex h-dvh w-screen justify-center overflow-hidden bg-black font-sans">
-    <div class="max-w-110 relative flex h-full w-full flex-col overflow-hidden shadow-2xl">
+<body class="phone-shell">
+    <div class="phone-frame flex flex-col">
 
         <!-- Header -->
         <div class="relative z-10 flex w-full shrink-0 items-center justify-center bg-[#ffac00] px-4 py-3 shadow-md">
@@ -21,8 +21,21 @@
             <h1 class="text-center text-xl font-extrabold tracking-wide text-[#800000]">PENANGGULANGAN BENCANA</h1>
         </div>
 
+        <!-- Tab pintasan jenis bencana -->
+        <div class="relative z-10 shrink-0 bg-[#ffac00]/95 px-3 py-2">
+            <div id="tabs" class="flex gap-2 overflow-x-auto pb-1">
+                @foreach ($disasters as $index => $disaster)
+                    <button type="button" class="nav-tab shrink-0 rounded-full border-2 border-[#800000] px-3 py-1 text-xs font-extrabold whitespace-nowrap transition-colors"
+                        data-index="{{ $index }}" data-slug="{{ $disaster->slug }}"
+                        style="background-color: {{ $index === 0 ? '#800000' : '#fff' }}; color: {{ $index === 0 ? '#fff' : '#800000' }}">
+                        {{ $disaster->name }}
+                    </button>
+                @endforeach
+            </div>
+        </div>
+
         <!-- Cards Container -->
-        <div id="cards-container" class="relative flex-1 overflow-hidden">
+        <div id="cards-container" class="relative flex-1 overflow-hidden" style="touch-action: pan-y">
             <div id="cards-track" class="flex h-full transition-transform duration-300 ease-out"
                 style="width: {{ $disasters->count() * 100 }}%">
 
@@ -96,17 +109,6 @@
                 </h3>
             </div>
 
-            <!-- Dots -->
-            <div class="mb-2 flex h-4 items-center justify-center gap-2">
-                @foreach ($disasters as $index => $disaster)
-                    <button class="nav-dot rounded-full transition-all duration-200" data-index="{{ $index }}"
-                        data-active="{{ $index === 0 ? 'true' : 'false' }}"
-                        style="background-color: {{ $index === 0 ? '#800000' : 'rgba(128,0,0,0.4)' }}; width: {{ $index === 0 ? '12px' : '8px' }}; height: {{ $index === 0 ? '12px' : '8px' }};"
-                        aria-label="{{ $disaster->name }}">
-                    </button>
-                @endforeach
-            </div>
-
             <!-- Arrows -->
             <div class="flex items-center justify-between">
                 <button id="nav-prev"
@@ -133,7 +135,7 @@
         (function() {
             const track = document.getElementById('cards-track');
             const cards = document.querySelectorAll('.disaster-card');
-            const dots = document.querySelectorAll('.nav-dot');
+            const tabs = document.querySelectorAll('.nav-tab');
             const title = document.getElementById('nav-title');
             const currentSpan = document.getElementById('nav-current');
             const prevBtn = document.getElementById('nav-prev');
@@ -146,19 +148,12 @@
                 currentIndex = index;
                 track.style.transform = 'translateX(-' + (currentIndex * (100 / total)) + '%)';
 
-                // Update dots
-                dots.forEach((dot, i) => {
-                    if (i === currentIndex) {
-                        dot.style.backgroundColor = '#800000';
-                        dot.style.width = '12px';
-                        dot.style.height = '12px';
-                        dot.dataset.active = 'true';
-                    } else {
-                        dot.style.backgroundColor = 'rgba(128,0,0,0.4)';
-                        dot.style.width = '8px';
-                        dot.style.height = '8px';
-                        dot.dataset.active = 'false';
-                    }
+                // Update tab aktif + scroll tab ke tampilan
+                tabs.forEach((tab, i) => {
+                    const active = i === currentIndex;
+                    tab.style.backgroundColor = active ? '#800000' : '#fff';
+                    tab.style.color = active ? '#fff' : '#800000';
+                    if (active) tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
                 });
 
                 // Update title
@@ -181,12 +176,16 @@
             prevBtn.addEventListener('click', () => goTo(currentIndex - 1));
             nextBtn.addEventListener('click', () => goTo(currentIndex + 1));
 
-            // Dot navigation
-            dots.forEach(dot => {
-                dot.addEventListener('click', () => {
-                    goTo(parseInt(dot.dataset.index));
-                });
+            // Tab navigation
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => goTo(parseInt(tab.dataset.index)));
             });
+
+            // Deep link #slug (dipakai tombol "Mitigasi" di peta bencana)
+            if (location.hash) {
+                const target = Array.from(tabs).find(t => t.dataset.slug === location.hash.slice(1));
+                if (target) goTo(parseInt(target.dataset.index));
+            }
 
             // Keyboard navigation
             document.addEventListener('keydown', (e) => {
@@ -194,27 +193,26 @@
                 if (e.key === 'ArrowRight') goTo(currentIndex + 1);
             });
 
-            // Touch swipe support
+            // Touch swipe: hanya geser kartu bila gerakan lebih horizontal daripada vertikal,
+            // supaya tidak bentrok dengan scroll isi kartu.
             let touchStartX = 0;
-            let touchEndX = 0;
+            let touchStartY = 0;
 
             const container = document.getElementById('cards-container');
             container.addEventListener('touchstart', (e) => {
                 touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
             }, {
                 passive: true
             });
 
             container.addEventListener('touchend', (e) => {
-                touchEndX = e.changedTouches[0].screenX;
-                const diff = touchStartX - touchEndX;
-                if (Math.abs(diff) > 50) {
-                    if (diff > 0) {
-                        goTo(currentIndex + 1);
-                    } else {
-                        goTo(currentIndex - 1);
-                    }
-                }
+                const dx = touchStartX - e.changedTouches[0].screenX;
+                const dy = touchStartY - e.changedTouches[0].screenY;
+
+                if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy)) return;
+
+                goTo(dx > 0 ? currentIndex + 1 : currentIndex - 1);
             }, {
                 passive: true
             });

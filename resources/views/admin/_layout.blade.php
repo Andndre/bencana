@@ -13,8 +13,12 @@
 
     <div class="flex h-screen overflow-hidden">
 
+        {{-- Overlay (mobile only) --}}
+        <div id="sidebar-overlay" class="fixed inset-0 z-30 hidden bg-black/50 lg:hidden"></div>
+
         {{-- Sidebar --}}
-        <aside class="w-64 flex-shrink-0 bg-[#800000] text-white flex flex-col">
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full bg-[#800000] text-white flex flex-col transition-transform duration-200 lg:static lg:translate-x-0">
             {{-- Logo --}}
             <div class="flex items-center gap-3 px-6 py-5 border-b border-white/20">
                 <div class="w-10 h-10 rounded-full bg-[#ffac00] flex items-center justify-center">
@@ -94,14 +98,22 @@
         <div class="flex-1 flex flex-col overflow-hidden">
 
             {{-- Top Header --}}
-            <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
-                <div>
-                    <h1 class="text-xl font-bold text-gray-800">@yield('page-title', 'Dashboard')</h1>
-                    @hasSection('page-subtitle')
-                        <p class="text-sm text-gray-500 mt-0.5">@yield('page-subtitle')</p>
-                    @endif
+            <header class="bg-white shadow-sm border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between gap-3 flex-shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button type="button" id="sidebar-toggle" aria-label="Buka menu"
+                        class="lg:hidden -ml-1 flex-shrink-0 rounded-lg p-2 text-gray-600 hover:bg-gray-100">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <div class="min-w-0">
+                        <h1 class="text-base sm:text-xl font-bold text-gray-800 truncate">@yield('page-title', 'Dashboard')</h1>
+                        @hasSection('page-subtitle')
+                            <p class="hidden sm:block text-sm text-gray-500 mt-0.5">@yield('page-subtitle')</p>
+                        @endif
+                    </div>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
                     @hasSection('header-actions')
                         @yield('header-actions')
                     @endif
@@ -110,7 +122,7 @@
 
             {{-- Flash Messages --}}
             @if (session('success'))
-                <div class="mx-6 mt-4 flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+                <div class="mx-3 sm:mx-6 mt-4 flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
                     <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -119,18 +131,34 @@
             @endif
 
             @if ($errors->any())
-                <div class="mx-6 mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+                <div class="mx-3 sm:mx-6 mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
                     <strong>Gagal:</strong> {{ $errors->first() }}
                 </div>
             @endif
 
             {{-- Page Content --}}
-            <main class="flex-1 overflow-y-auto p-6">
+            <main class="flex-1 overflow-y-auto p-3 sm:p-6">
                 @yield('content')
             </main>
 
         </div>
     </div>
+
+    <script>
+        (function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            function toggle(open) {
+                sidebar.classList.toggle('-translate-x-full', !open);
+                overlay.classList.toggle('hidden', !open);
+            }
+
+            document.getElementById('sidebar-toggle').addEventListener('click', () => toggle(true));
+            overlay.addEventListener('click', () => toggle(false));
+            sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => toggle(false)));
+        })();
+    </script>
 
     @yield('scripts')
 </body>

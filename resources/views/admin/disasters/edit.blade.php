@@ -81,21 +81,25 @@
 
                         {{-- Existing steps --}}
                         <div class="steps-list space-y-2 mb-3">
-                            @forelse ($disaster->mitigationSteps->where('phase', $phase) as $step)
-                                <div class="flex items-start gap-2">
+                            @foreach ($disaster->mitigationSteps->where('phase', $phase) as $step)
+                                <div class="step-row flex items-start gap-2">
+                                    <span class="drag-handle cursor-grab select-none px-1 py-2 text-gray-400 hover:text-gray-600 flex-shrink-0"
+                                        title="Geser untuk mengubah urutan">⠿</span>
+                                    <input type="hidden" name="steps[{{ $step->id }}][order]" class="step-order" value="{{ $step->order }}">
                                     <input type="text"
                                         name="steps[{{ $step->id }}][content]"
                                         value="{{ old("steps.{$step->id}.content", $step->content) }}"
                                         class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-[#c25c06] focus:outline-none focus:ring-2 focus:ring-[#c25c06]/20">
-                                    <a href="{{ route('admin.disasters.steps.destroy', $step) }}"
-                                        onclick="event.preventDefault(); if(confirm('Hapus langkah ini?')) { fetch(this.href, {method:'DELETE', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'turbo-stream'}}).then(() => location.reload()); }"
+                                    <button type="button"
+                                        onclick="deleteStep(this, '{{ route('admin.disasters.steps.destroy', $step) }}')"
                                         class="rounded-lg border border-red-200 bg-white px-2.5 py-2 text-xs font-semibold text-red-500 hover:bg-red-50 hover:border-red-400 transition-colors flex-shrink-0">
                                         ✕
-                                    </a>
+                                    </button>
                                 </div>
-                            @empty
-                                <p class="text-xs text-gray-400 italic py-1">Belum ada langkah.</p>
-                            @endforelse
+                            @endforeach
+                            <p class="empty-hint text-xs text-gray-400 italic py-1 {{ $disaster->mitigationSteps->where('phase', $phase)->isEmpty() ? '' : 'hidden' }}">
+                                Belum ada langkah.
+                            </p>
                         </div>
 
                         {{-- Add new --}}
@@ -129,6 +133,7 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script>
     function addStep(phase) {
         var input = document.getElementById('new-step-' + phase);
@@ -136,7 +141,6 @@
         if (!value) return;
 
         var form = document.getElementById('main-form');
-        var id = 'new_' + Date.now();
 
         // Hidden field for backend
         var hidden = document.createElement('input');
@@ -150,13 +154,59 @@
         var row = document.createElement('div');
         row.className = 'flex items-start gap-2';
         row.innerHTML =
-            '<input type="text" value="' + value.replace(/"/g, '&quot;') + '" readonly' +
+            '<input type="text" readonly' +
             ' class="flex-1 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm text-gray-700 cursor-default">' +
-            '<button type="button" onclick="this.closest(\'div\').remove()" class="rounded-lg border border-red-200 bg-white px-2.5 py-2 text-xs font-semibold text-red-500 hover:bg-red-50 flex-shrink-0">✕</button>';
+            '<button type="button" class="rounded-lg border border-red-200 bg-white px-2.5 py-2 text-xs font-semibold text-red-500 hover:bg-red-50 flex-shrink-0">✕</button>';
+        row.querySelector('input').value = value;
+        row.querySelector('button').addEventListener('click', function() {
+            hidden.remove();
+            row.remove();
+        });
         stepsList.appendChild(row);
+        stepsList.querySelector('.empty-hint')?.classList.add('hidden');
 
         input.value = '';
         input.focus();
     }
+
+    function deleteStep(button, url) {
+        if (!confirm('Hapus langkah ini?')) return;
+
+        fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json',
+            },
+        }).then(function(res) {
+            if (!res.ok) {
+                alert('Gagal menghapus langkah.');
+                return;
+            }
+            const list = button.closest('.steps-list');
+            button.closest('.step-row').remove();
+            if (!list.querySelector('.step-row')) {
+                list.querySelector('.empty-hint')?.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Drag & drop urutan langkah (per fase, tidak lintas fase)
+    document.querySelectorAll('.steps-list').forEach(function(list) {
+        Sortable.create(list, {
+            handle: '.drag-handle',
+            animation: 150,
+            draggable: '.step-row',
+        });
+    });
+
+    // Tulis ulang nilai order sesuai urutan DOM sebelum submit
+    document.getElementById('main-form').addEventListener('submit', function() {
+        document.querySelectorAll('.steps-list').forEach(function(list) {
+            list.querySelectorAll('.step-row .step-order').forEach(function(input, index) {
+                input.value = index + 1;
+            });
+        });
+    });
 </script>
 @endsection

@@ -9,8 +9,8 @@
     @vite(['resources/css/app.css'])
 </head>
 
-<body class="flex h-dvh w-screen justify-center overflow-hidden bg-black font-sans">
-    <div class="max-w-110 relative h-full w-full overflow-hidden shadow-2xl">
+<body class="phone-shell">
+    <div class="phone-frame">
 
         <div id="page"
             class="absolute inset-0 flex flex-col items-center justify-start transition-opacity duration-500 ease-in-out">

@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Disaster;
 use App\Models\DisasterLocation;
 use App\Models\MitigationStep;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminController extends Controller
 {
@@ -71,14 +74,17 @@ class AdminController extends Controller
             foreach ($request->input('steps') as $stepId => $stepData) {
                 MitigationStep::where('id', $stepId)
                     ->where('disaster_id', $disaster->id)
-                    ->update(['content' => $stepData['content']]);
+                    ->update([
+                        'content' => $stepData['content'],
+                        'order' => (int) ($stepData['order'] ?? 0),
+                    ]);
             }
         }
 
         // Add new steps
         if ($request->has('new_steps')) {
-            $maxOrder = $disaster->mitigationSteps()->max('order') ?? 0;
             foreach ($request->input('new_steps') as $phase => $contents) {
+                $maxOrder = $disaster->mitigationSteps()->where('phase', $phase)->max('order') ?? 0;
                 foreach ($contents as $content) {
                     if (trim($content)) {
                         $maxOrder++;
@@ -96,11 +102,60 @@ class AdminController extends Controller
         return redirect()->route('admin.disasters.index')->with('success', 'Data bencana berhasil diperbarui.');
     }
 
-    public function editLocations(): View
+    public function editLocations(Request $request): View
     {
-        $disasters = Disaster::with('locations')->get();
+        $locations = $this->filteredLocations($request)->paginate(15)->withQueryString();
+        $mapLocations = DisasterLocation::with('disaster')->get();
+        $disasters = Disaster::orderBy('name')->get();
 
-        return view('admin.locations.index', compact('disasters'));
+        return view('admin.locations.index', compact('locations', 'mapLocations', 'disasters'));
+    }
+
+    public function bulkDestroyLocations(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:disaster_locations,id',
+        ]);
+
+        $count = DisasterLocation::whereIn('id', $validated['ids'])->delete();
+
+        return redirect()->back()->with('success', "{$count} lokasi berhasil dihapus.");
+    }
+
+    public function exportLocations(Request $request): StreamedResponse
+    {
+        $locations = $this->filteredLocations($request)->get();
+
+        return response()->streamDownload(function () use ($locations) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Nama Lokasi', 'Bencana', 'Latitude', 'Longitude']);
+            foreach ($locations as $location) {
+                fputcsv($out, [
+                    $location->location_name,
+                    $location->disaster?->name,
+                    $location->latitude,
+                    $location->longitude,
+                ]);
+            }
+            fclose($out);
+        }, 'lokasi-bencana-'.now()->format('Ymd_His').'.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Query lokasi dengan filter pencarian, jenis bencana, dan urutan dari request.
+     */
+    private function filteredLocations(Request $request): Builder
+    {
+        $sort = in_array($request->query('sort'), ['location_name', 'disaster_id', 'latitude'], true)
+            ? $request->query('sort')
+            : 'location_name';
+        $dir = $request->query('dir') === 'desc' ? 'desc' : 'asc';
+
+        return DisasterLocation::with('disaster')
+            ->when($request->query('q'), fn (Builder $query, string $q) => $query->where('location_name', 'like', "%{$q}%"))
+            ->when($request->query('disaster_id'), fn (Builder $query, $id) => $query->where('disaster_id', $id))
+            ->orderBy($sort, $dir);
     }
 
     public function storeLocation(Request $request): RedirectResponse
@@ -138,9 +193,13 @@ class AdminController extends Controller
         return redirect()->route('admin.locations')->with('success', 'Lokasi berhasil dihapus.');
     }
 
-    public function destroyStep(MitigationStep $step): RedirectResponse
+    public function destroyStep(Request $request, MitigationStep $step): Response|RedirectResponse
     {
         $step->delete();
+
+        if ($request->expectsJson()) {
+            return response()->noContent();
+        }
 
         return redirect()->back()->with('success', 'Langkah berhasil dihapus.');
     }

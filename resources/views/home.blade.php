@@ -10,10 +10,10 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 
-<body class="flex h-dvh w-screen justify-center overflow-hidden bg-black font-sans">
+<body class="phone-shell">
 
     <!-- Mobile Container -->
-    <div class="max-w-110 relative h-full w-full overflow-hidden shadow-2xl">
+    <div class="phone-frame">
 
         <div id="splash-screen"
             class="absolute inset-0 flex items-center justify-center transition-opacity duration-700 ease-in-out"

@@ -36,6 +36,63 @@
 
 <body>
 
+    <div id="instructions"
+        style="
+  position:fixed;inset:0;background:#0b0b0b;z-index:10001;display:none;
+  flex-direction:column;align-items:center;justify-content:center;padding:24px;
+  font-family:Arial,sans-serif;color:#fff;text-align:left;
+">
+        <div style="max-width:340px;width:100%;background:#1a1a1a;border-radius:14px;padding:20px">
+            <h3 style="margin:0 0 12px;color:#ffac00;font-size:17px">Cara memakai kamera AR</h3>
+            <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:#ddd">
+                <li>Pastikan ruangan cukup terang, hindari pantulan cahaya di marker.</li>
+                <li>Jarak kamera ke marker sekitar 20–40 cm.</li>
+                <li>Letakkan marker di permukaan datar, jangan tertekuk.</li>
+                <li>Tahan HP stabil sampai objek 3D muncul.</li>
+            </ul>
+            <button id="instructions-start"
+                style="margin-top:16px;width:100%;background:#c25c06;color:#fff;border:none;
+                       border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer">
+                Mulai
+            </button>
+            <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:#999">
+                <input type="checkbox" id="instructions-hide"> Jangan tampilkan lagi
+            </label>
+        </div>
+    </div>
+
+    <div id="camera-error"
+        style="
+  position:fixed;inset:0;background:#0b0b0b;z-index:10002;display:none;
+  flex-direction:column;align-items:center;justify-content:center;padding:24px;
+  font-family:Arial,sans-serif;color:#fff;
+">
+        <div style="max-width:340px;width:100%;background:#1a1a1a;border-radius:14px;padding:20px">
+            <h3 style="margin:0 0 10px;color:#ff6b6b;font-size:17px">Kamera tidak dapat diakses</h3>
+            <p id="camera-error-reason" style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#ddd"></p>
+            <p style="margin:0 0 16px;font-size:12px;line-height:1.6;color:#999">
+                Chrome/Edge: ketuk ikon gembok di address bar → Izin situs → Kamera → Izinkan.<br>
+                Safari iOS: Pengaturan → Safari → Kamera → Izinkan.<br>
+                AR juga membutuhkan koneksi HTTPS.
+            </p>
+            <div style="display:flex;gap:8px">
+                <button id="camera-retry"
+                    style="flex:1;background:#c25c06;color:#fff;border:none;border-radius:10px;
+                           padding:11px;font-size:13px;font-weight:700;cursor:pointer">Coba Lagi</button>
+                <a href="/simulasi-bencana"
+                    style="flex:1;text-align:center;background:#333;color:#fff;border-radius:10px;
+                           padding:11px;font-size:13px;font-weight:700;text-decoration:none">Kembali</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="scan-hint"
+        style="
+  position:absolute;top:70px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.65);color:#fff;padding:8px 14px;border-radius:20px;
+  font-family:Arial,sans-serif;font-size:12px;z-index:1000;display:none;white-space:nowrap;
+">Arahkan kamera ke marker AR</div>
+
     <div id="loading-overlay"
         style="
   position:fixed;inset:0;background:#000;display:flex;
@@ -122,20 +179,63 @@
         document.addEventListener('DOMContentLoaded', function() {
             var scene = document.querySelector('a-scene');
             var overlay = document.getElementById('loading-overlay');
+            var hint = document.getElementById('scan-hint');
+            var errorPanel = document.getElementById('camera-error');
+            var instructions = document.getElementById('instructions');
 
             // Log semua error JS yang terjadi
             window.addEventListener('error', function(e) {
                 console.error('[ar-camera] JS Error:', e.message, e.filename + ':' + e.lineno);
             });
 
+            // --- Instruksi penggunaan ---
+            if (localStorage.getItem('ar-instructions-hidden') !== '1') {
+                instructions.style.display = 'flex';
+            }
+
+            document.getElementById('instructions-start').addEventListener('click', function() {
+                if (document.getElementById('instructions-hide').checked) {
+                    localStorage.setItem('ar-instructions-hidden', '1');
+                }
+                instructions.style.display = 'none';
+            });
+
+            // --- Fallback izin kamera ---
+            function showCameraError(reason) {
+                document.getElementById('camera-error-reason').textContent = reason;
+                overlay.style.display = 'none';
+                instructions.style.display = 'none';
+                hint.style.display = 'none';
+                errorPanel.style.display = 'flex';
+            }
+
+            document.getElementById('camera-retry').addEventListener('click', function() {
+                location.reload();
+            });
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showCameraError('Browser ini tidak mendukung akses kamera (getUserMedia). Coba buka lewat Chrome atau Safari terbaru.');
+            } else {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(stream) {
+                        // Lepas stream uji; AR.js membuka kameranya sendiri.
+                        stream.getTracks().forEach(function(track) { track.stop(); });
+                    })
+                    .catch(function(err) {
+                        if (err.name === 'NotAllowedError') {
+                            showCameraError('Izin kamera ditolak. Berikan izin kamera untuk situs ini, lalu coba lagi.');
+                        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                            showCameraError('Tidak ada kamera yang terdeteksi pada perangkat ini.');
+                        } else {
+                            showCameraError('Kamera gagal diakses (' + err.name + ').');
+                        }
+                    });
+            }
+
             // Cek apakah AR.js berhasil load video stream
             scene.addEventListener('arSystemError', function(e) {
                 console.error('[ar-camera] AR System Error:', e.detail);
-                overlay.innerHTML =
-                    '<p style="color:#f55;font-size:14px;padding:20px;text-align:center">Kamera gagal diakses. Pastikan izin kamera diaktifkan.</p>';
-                setTimeout(function() {
-                    overlay.style.display = 'none';
-                }, 3000);
+                showCameraError('AR gagal menginisialisasi kamera. Pastikan izin kamera diaktifkan.');
             });
 
             scene.addEventListener('cameraInit', function(e) {
@@ -145,6 +245,7 @@
             // Hide overlay once AR.js renderer starts drawing
             scene.addEventListener('arRendered', function() {
                 overlay.style.display = 'none';
+                if (errorPanel.style.display !== 'flex') hint.style.display = 'block';
             });
 
             // Fallback: always hide overlay after 10s even if arRendered doesn't fire
@@ -154,14 +255,7 @@
                 var video = document.querySelector('video');
                 if (video && !video.srcObject) {
                     console.warn('[ar-camera] Video stream tidak aktif setelah 10 detik');
-                    var msg = document.createElement('div');
-                    msg.style =
-                        'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:rgba(200,50,50,.9);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:9999;text-align:center';
-                    msg.textContent = 'Kamera tidak aktif — cek izin kamera di browser';
-                    document.body.appendChild(msg);
-                    setTimeout(function() {
-                        msg.remove();
-                    }, 5000);
+                    showCameraError('Kamera tidak aktif setelah 10 detik. Cek izin kamera di browser.');
                 } else if (video) {
                     console.log('[ar-camera] Video stream aktif — OK');
                 }
@@ -170,6 +264,7 @@
             document.querySelectorAll('a-marker').forEach(function(marker) {
                 marker.addEventListener('markerFound', function() {
                     console.log('[ar-camera] markerFound:', marker.id);
+                    hint.style.display = 'none';
                     document.getElementById('marker-title').textContent = marker.getAttribute(
                         'data-marker-name');
                     document.getElementById('marker-description').textContent = marker.getAttribute(
@@ -179,6 +274,7 @@
 
                 marker.addEventListener('markerLost', function() {
                     document.getElementById('ar-info').style.display = 'none';
+                    if (errorPanel.style.display !== 'flex') hint.style.display = 'block';
                 });
             });
         });

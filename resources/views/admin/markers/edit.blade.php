@@ -16,7 +16,8 @@
     <div class="max-w-2xl">
 
         <form method="POST" action="{{ route('admin.markers.update', $marker) }}" enctype="multipart/form-data"
-            class="space-y-5 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            id="marker-form" data-redirect="{{ route('admin.markers.index') }}"
+            class="space-y-5 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             @csrf
             @method('PUT')
@@ -72,6 +73,7 @@
                         </div>
                     </label>
                 </div>
+                <p id="marker-file-info" class="mt-1 text-xs text-gray-500"></p>
                 <p class="mt-2 text-xs text-gray-400">
                     Kosongkan jika tidak ingin mengubah gambar.
                     Gunakan gambar dengan kontras tinggi dan detail visual jelas. Minimal 512×512 pixel.
@@ -109,6 +111,13 @@
                         </div>
                     </label>
                 </div>
+                <div id="model-viewer-wrap" class="mt-3 @unless ($marker->path_model) hidden @endunless">
+                    <model-viewer id="model-viewer" camera-controls auto-rotate shadow-intensity="1"
+                        src="{{ $marker->path_model ? asset('storage/' . $marker->path_model) : '' }}"
+                        class="h-64 w-full rounded-lg border border-gray-200 bg-gray-50"></model-viewer>
+                    <p class="mt-1 text-xs text-gray-400">Geser untuk memutar model, scroll untuk zoom.</p>
+                </div>
+                <p id="model-file-info" class="mt-1 text-xs text-gray-500"></p>
                 <p class="mt-2 text-xs text-gray-400">
                     Kosongkan jika tidak ingin mengubah model 3D.
                     Maksimal 20MB.
@@ -145,6 +154,10 @@
                         </div>
                     </label>
                 </div>
+                <audio id="audio-preview" controls
+                    class="mt-3 w-full @unless ($marker->path_audio) hidden @endunless"
+                    src="{{ $marker->path_audio ? asset('storage/' . $marker->path_audio) : '' }}"></audio>
+                <p id="audio-file-info" class="mt-1 text-xs text-gray-500"></p>
                 <p class="mt-2 text-xs text-gray-400">
                     Kosongkan jika tidak ingin mengubah audio.
                     Maksimal 10MB.
@@ -152,6 +165,16 @@
                 @error('path_audio')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                 @enderror
+            </div>
+
+            <div id="upload-progress" class="hidden">
+                <div class="mb-1 flex items-center justify-between text-xs font-semibold text-gray-600">
+                    <span>Mengunggah...</span>
+                    <span id="upload-percent">0%</span>
+                </div>
+                <div class="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                    <div id="upload-bar" class="h-full w-0 bg-[#c25c06] transition-all duration-150"></div>
+                </div>
             </div>
 
             <div class="flex items-center gap-3 pt-2">
@@ -182,6 +205,7 @@
                     document.getElementById('upload-placeholder').classList.add('hidden');
                 };
                 reader.readAsDataURL(file);
+                showFileInfo('marker-file-info', file, 5);
             }
         }
 
@@ -191,6 +215,8 @@
                 document.getElementById('model-filename').textContent = file.name;
                 document.getElementById('model-preview-container').classList.remove('hidden');
                 document.getElementById('model-placeholder').classList.add('hidden');
+                showFileInfo('model-file-info', file, 20);
+                showModelPreview(file);
             }
         }
 
@@ -200,6 +226,11 @@
                 document.getElementById('audio-filename').textContent = file.name;
                 document.getElementById('audio-preview-container').classList.remove('hidden');
                 document.getElementById('audio-placeholder').classList.add('hidden');
+                showFileInfo('audio-file-info', file, 10);
+
+                var audio = document.getElementById('audio-preview');
+                audio.src = URL.createObjectURL(file);
+                audio.classList.remove('hidden');
             }
         }
 
@@ -287,4 +318,6 @@
             });
         }
     </script>
+
+    @include('admin.markers._upload-js')
 @endsection

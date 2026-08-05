@@ -10,3 +10,16 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* Frame HP untuk halaman publik: layar penuh di mobile, bezel di layar lebar. */
+@layer components {
+    .phone-shell {
+        @apply flex h-dvh w-screen items-center justify-center overflow-hidden font-sans;
+        background: radial-gradient(circle at 50% 0%, #3a1a04 0%, #140800 55%, #000 100%);
+    }
+
+    .phone-frame {
+        @apply relative h-full w-full max-w-110 overflow-hidden bg-black shadow-2xl
+               lg:h-[92dvh] lg:rounded-[2.5rem] lg:border-8 lg:border-neutral-800;
+    }
+}

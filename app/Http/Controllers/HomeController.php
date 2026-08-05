@@ -29,8 +29,9 @@ class HomeController extends Controller
     public function petaBencana(): View
     {
         $locations = DisasterLocation::with('disaster')->get();
+        $disasters = Disaster::has('locations')->orderBy('name')->get();
 
-        return view('peta-bencana', compact('locations'));
+        return view('peta-bencana', compact('locations', 'disasters'));
     }
 
     public function arKamera(): View

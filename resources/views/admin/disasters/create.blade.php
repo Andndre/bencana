@@ -21,7 +21,7 @@
 
         <div>
             <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nama Bencana <span class="text-red-500">*</span></label>
-            <input type="text" name="name" value="{{ old('name') }}" required autofocus
+            <input type="text" name="name" id="name-input" value="{{ old('name') }}" required autofocus
                 placeholder="Contoh: Banjir"
                 class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-[#c25c06] focus:outline-none focus:ring-2 focus:ring-[#c25c06]/20 @error('name') border-red-500 @enderror">
             @error('name')
@@ -31,10 +31,10 @@
 
         <div>
             <label class="block text-sm font-semibold text-gray-700 mb-1.5">Slug <span class="text-red-500">*</span></label>
-            <input type="text" name="slug" value="{{ old('slug') }}" required
+            <input type="text" name="slug" id="slug-input" value="{{ old('slug') }}" required
                 placeholder="Contoh: banjir"
                 class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-[#c25c06] focus:outline-none focus:ring-2 focus:ring-[#c25c06]/20 @error('slug') border-red-500 @enderror">
-            <p class="mt-1 text-xs text-gray-400">Slug digunakan untuk URL. Huruf kecil, tanpa spasi, gunakan tanda hubung (-).</p>
+            <p class="mt-1 text-xs text-gray-400">Terisi otomatis dari nama bencana. Bisa diubah manual — setelah diubah, tidak ditimpa lagi.</p>
             @error('slug')
                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
             @enderror
@@ -64,4 +64,22 @@
     </form>
 </div>
 
+@endsection
+
+@section('scripts')
+<script>
+    (function() {
+        const name = document.getElementById('name-input');
+        const slug = document.getElementById('slug-input');
+        let slugTouched = slug.value !== '';
+
+        slug.addEventListener('input', () => { slugTouched = true; });
+        name.addEventListener('input', function() {
+            if (slugTouched) return;
+            slug.value = name.value.toLowerCase().trim()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        });
+    })();
+</script>
 @endsection
