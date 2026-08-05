@@ -87,6 +87,10 @@
         <div id="panduan-overlay" class="absolute inset-0 z-50 hidden bg-black/85">
             <!-- Header -->
             <div class="relative z-10 flex w-full items-center justify-center bg-[#ffac00] px-4 py-3 shadow-md">
+                {{-- Klik di mana pun sudah menutup overlay, jadi tombol ini cukup ikut bubbling. --}}
+                <button type="button" aria-label="Kembali" class="absolute left-4 flex cursor-pointer items-center">
+                    <img src="{{ asset('images/left-arrow.webp') }}" alt="" class="w-4">
+                </button>
                 <h1 class="text-center text-xl font-extrabold tracking-wide text-[#800000]">PANDUAN</h1>
             </div>
 
