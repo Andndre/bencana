@@ -18,8 +18,15 @@
         background: radial-gradient(circle at 50% 0%, #3a1a04 0%, #140800 55%, #000 100%);
     }
 
+    /* Di perangkat sentuh selalu penuh layar: sebagian browser in-app memakai lebar
+       layout ~980px, jadi batas 440px membuat tampilan menyempit di tengah. */
     .phone-frame {
-        @apply relative h-full w-full max-w-110 overflow-hidden bg-black shadow-2xl
-               lg:h-[92dvh] lg:rounded-[2.5rem] lg:border-8 lg:border-neutral-800;
+        @apply relative h-full w-full overflow-hidden bg-black shadow-2xl;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+        .phone-frame {
+            @apply max-w-110 lg:h-[92dvh] lg:rounded-[2.5rem] lg:border-8 lg:border-neutral-800;
+        }
     }
 }

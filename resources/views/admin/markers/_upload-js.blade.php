@@ -1,5 +1,12 @@
 {{-- Preview 3D + progress bar upload. Dipakai oleh markers/create dan markers/edit (ID elemen sama). --}}
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+<script type="module">
+    import { ModelViewerElement } from 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js';
+
+    // model-viewer 3.5.0 tidak punya lokasi default untuk decoder Meshopt, jadi GLB hasil
+    // kompresi EXT_meshopt_compression gagal dimuat sampai lokasi ini diisi sendiri.
+    // File decoder-nya sudah ada di repo, dipakai bareng /ar-kamera.
+    ModelViewerElement.meshoptDecoderLocation = '/ar-marker/meshopt_decoder.js';
+</script>
 <script>
     var modelObjectUrl = null;
 
