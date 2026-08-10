@@ -10,13 +10,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Disaster extends Model
 {
-    /** Warna marker peta per slug bencana. */
+    /** Warna marker peta per slug bencana. Hue sengaja dijauhkan (>40°) supaya mudah dibedakan. */
     public const COLORS = [
-        'banjir' => '#1e40af',
-        'tanah-longsor' => '#78350f',
-        'gempa-bumi' => '#991b1b',
-        'tsunami' => '#0c4a6e',
-        'angin-puting-beliung' => '#065f46',
+        'banjir' => '#2563eb',              // biru
+        'tsunami' => '#14b8a6',             // teal
+        'gempa-bumi' => '#dc2626',          // merah
+        'tanah-longsor' => '#a16207',       // cokelat
+        'angin-puting-beliung' => '#7c3aed', // ungu
     ];
 
     public const DEFAULT_COLOR = '#800000';

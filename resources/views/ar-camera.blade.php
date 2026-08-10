@@ -31,6 +31,20 @@
         .a-loader-title {
             display: none !important;
         }
+
+        /* AR.js menghitung ukuran video dari rasio 4:3 dan bisa mendorong video
+           keluar layar di perangkat berasio tidak lazim (mis. Samsung Z Fold layar dalam)
+           sehingga yang terlihat hanya hitam. Paksa video menutupi viewport. */
+        #arjs-video {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            margin: 0 !important;
+            transform: none !important;
+            object-fit: cover !important;
+        }
     </style>
 </head>
 
@@ -214,19 +228,30 @@
                 location.reload();
             });
 
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                showCameraError('Browser ini tidak mendukung akses kamera (getUserMedia). Coba buka lewat Chrome atau Safari terbaru.');
-            } else {
-                navigator.mediaDevices.getUserMedia({ video: true })
+            // Diagnosa hanya dijalankan saat AR.js gagal. Membuka getUserMedia sendiri
+            // bersamaan dengan AR.js membuat kamera bentrok di sebagian perangkat Android
+            // (Samsung) dan hasilnya layar hitam.
+            function diagnoseCamera() {
+                if (!window.isSecureContext) {
+                    showCameraError('Halaman tidak dibuka lewat HTTPS sehingga browser memblokir kamera.');
+                    return;
+                }
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showCameraError('Browser ini tidak mendukung akses kamera (getUserMedia). Coba buka lewat Chrome atau Safari terbaru.');
+                    return;
+                }
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                     .then(function(stream) {
-                        // Lepas stream uji; AR.js membuka kameranya sendiri.
                         stream.getTracks().forEach(function(track) { track.stop(); });
+                        showCameraError('Kamera bisa diakses tetapi AR gagal menampilkannya. Tutup aplikasi lain yang memakai kamera, lalu coba lagi.');
                     })
                     .catch(function(err) {
                         if (err.name === 'NotAllowedError') {
                             showCameraError('Izin kamera ditolak. Berikan izin kamera untuk situs ini, lalu coba lagi.');
                         } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
                             showCameraError('Tidak ada kamera yang terdeteksi pada perangkat ini.');
+                        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                            showCameraError('Kamera sedang dipakai aplikasi lain. Tutup aplikasi kamera lain lalu coba lagi.');
                         } else {
                             showCameraError('Kamera gagal diakses (' + err.name + ').');
                         }
@@ -249,16 +274,16 @@
                 if (errorPanel.style.display !== 'flex') hint.style.display = 'block';
             });
 
-            // Fallback: always hide overlay after 10s even if arRendered doesn't fire
+            // Fallback: sembunyikan overlay walau arRendered tidak pernah muncul.
+            // videoWidth = 0 berarti kamera tidak mengirim frame (layar hitam).
             setTimeout(function() {
                 overlay.style.display = 'none';
-                // Cek apakah video element punya stream aktif
-                var video = document.querySelector('video');
-                if (video && !video.srcObject) {
+                var video = document.querySelector('#arjs-video') || document.querySelector('video');
+                if (!video || !video.srcObject || !video.videoWidth) {
                     console.warn('[ar-camera] Video stream tidak aktif setelah 10 detik');
-                    showCameraError('Kamera tidak aktif setelah 10 detik. Cek izin kamera di browser.');
-                } else if (video) {
-                    console.log('[ar-camera] Video stream aktif — OK');
+                    diagnoseCamera();
+                } else {
+                    console.log('[ar-camera] Video stream aktif — OK', video.videoWidth + 'x' + video.videoHeight);
                 }
             }, 10000);
 
