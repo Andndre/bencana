@@ -2,15 +2,15 @@
  * AR Dynamic GLB Loader — Bencana Alam
  *
  * Logic:
- * 1. Saat marker terdeteksi (markerFound) → download GLB, tampilkan
- * 2. Saat marker hilang (markerLost)  → cache tetap, hide model dari scene
- * 3. Model di-cache (Map) → tidak download ulang jika marker muncul lagi
- * 4. Visibility versioning → cancel load jika marker hilang sebelum load selesai
+ * 1. Saat marker terdeteksi (markerFound) → pakai model dari cache, atau download sekali
+ * 2. Saat marker hilang (markerLost)  → tunggu grace period, baru lepas model
+ * 3. Satu modelSrc = satu load seumur halaman; load tidak pernah dibatalkan
  */
 
 // ── State ────────────────────────────────────────────────────────────────────
-var markerVisibilityVersion = new Map(); // markerId → integer counter
-var modelStates = new Map(); // modelSrc → { loaded, object3D, animations }
+var modelStates = new Map(); // modelSrc → { loaded, object3D, animations, mixer }
+var modelLoads = new Map(); // modelSrc → Promise (load yang sedang berjalan)
+var MARKER_LOST_GRACE_MS = 400; // tahan model saat tracking berkedip sesaat
 var audioElements = new Map(); // audioSrc → HTMLAudioElement (legacy)
 var audioBufferCache = new Map(); // audioSrc → AudioBuffer
 var audioContext = null; // Web Audio API context (lazy init)
@@ -59,20 +59,6 @@ function initLoaders() {
     THREE.GLTFLoader.prototype.constructor = THREE.GLTFLoader;
 
     console.log("[ar-loader] Meshopt + DRACO auto-injected via loader patch");
-}
-
-// ── Visibility Versioning ────────────────────────────────────────────────────
-function bumpMarkerVisibilityVersion(markerId) {
-    var next = (markerVisibilityVersion.get(markerId) || 0) + 1;
-    markerVisibilityVersion.set(markerId, next);
-    return next;
-}
-
-function isMarkerLoadStillRelevant(markerId, visibilityVersion) {
-    return (
-        markerVisibilityVersion.has(markerId) &&
-        (markerVisibilityVersion.get(markerId) || 0) === visibilityVersion
-    );
 }
 
 // ── Parse metadata dari data-marker-* attributes ─────────────────────────────
@@ -310,99 +296,82 @@ function hideLoading() {
 // ── Load GLB via A-Frame / Three.js ──────────────────────────────────────────────
 // Karena initLoaders() sudah set MeshoptDecoder dan DRACO di prototype,
 // GLTFLoader.load() otomatis handle kedua extension.
-function loadGLB(modelSrc, markerId, visibilityVersion) {
-    return new Promise(function (resolve, reject) {
+//
+// Satu modelSrc = satu load, hasilnya di-cache selamanya. Load TIDAK pernah
+// dibatalkan: tracking marker AR gampang berkedip, dan versi lama membatalkan
+// load setiap kali marker hilang sehingga model sering tidak pernah selesai
+// dimuat dan entity ditinggal kosong.
+function ensureModel(modelSrc) {
+    if (modelStates.has(modelSrc)) {
+        return Promise.resolve(modelStates.get(modelSrc));
+    }
+    if (modelLoads.has(modelSrc)) {
+        return modelLoads.get(modelSrc);
+    }
+
+    var promise = new Promise(function (resolve, reject) {
         if (!globalClock) {
             globalClock = new THREE.Clock();
             globalClock.start(); // Start clock agar getDelta() return elapsed time
         }
 
-        var loader = new THREE.GLTFLoader();
-        var cancelled = false;
-
-        loader.load(
+        new THREE.GLTFLoader().load(
             modelSrc,
             function (gltf) {
-                if (
-                    cancelled ||
-                    !isMarkerLoadStillRelevant(markerId, visibilityVersion)
-                )
-                    return;
-                cancelled = true;
-
-                var scene = gltf.scene;
-                if (!scene) {
+                if (!gltf.scene) {
                     reject(new Error("Scene kosong"));
                     return;
                 }
 
-                var marker = document.getElementById(markerId);
-                if (marker) {
-                    var entity = marker.querySelector("a-entity");
-                    if (entity) {
-                        var modelData = parseMarkerModelData(marker);
-                        entity.setAttribute(
-                            "position",
-                            modelData.modelPosition,
-                        );
-                        entity.setAttribute("scale", modelData.modelScale);
-                        entity.setObject3D("dynamicModel", scene);
-                    }
-                }
+                var entry = {
+                    loaded: true,
+                    object3D: gltf.scene,
+                    animations: gltf.animations || [],
+                    mixer: null,
+                };
 
-                // Jalankan semua animasi — clipAction.play() auto-starts dari time 0
-                if (gltf.animations && gltf.animations.length > 0 && scene) {
-                    // Animasi clock mulai saat loadGLB() dipanggil. Jika load cepat (<0.1s),
-                    // initial getDelta() sudah aman. Jika lambat, clamp di animation loop
-                    // (dt > 0.1) akan menanganinya. Dua pemanggilan getDelta() berikut
-                    // mengsinkronkan clock agar mixer mulai dari elapsed ≈ 0.
-                    globalClock.getDelta();
+                // Jalankan semua animasi — clipAction.play() auto-starts dari time 0.
+                // timeScale 0 dulu; baru jalan saat model benar-benar terpasang.
+                if (entry.animations.length > 0) {
                     globalClock.getDelta();
 
-                    var mixer = new THREE.AnimationMixer(scene);
-                    gltf.animations.forEach(function (clip) {
+                    var mixer = new THREE.AnimationMixer(gltf.scene);
+                    entry.animations.forEach(function (clip) {
                         mixer.clipAction(clip).play();
                     });
-                    mixer._markerId = markerId;
+                    mixer.timeScale = 0;
+                    entry.mixer = mixer;
                     _arAnimationMixers.push(mixer);
-
-                    modelStates.set(modelSrc, {
-                        loaded: true,
-                        object3D: gltf.scene,
-                        animations: gltf.animations,
-                        mixer: mixer,
-                    });
                 }
 
+                modelStates.set(modelSrc, entry);
                 updateProgress(100);
-
-                resolve(gltf);
+                resolve(entry);
             },
             function (e) {
-                if (
-                    cancelled ||
-                    !isMarkerLoadStillRelevant(markerId, visibilityVersion)
-                ) {
-                    cancelled = true;
-                    return;
-                }
                 if (e.lengthComputable)
                     updateProgress(Math.round((e.loaded / e.total) * 90));
             },
-            function (err) {
-                if (
-                    !cancelled &&
-                    isMarkerLoadStillRelevant(markerId, visibilityVersion)
-                ) {
-                    reject(err);
-                }
-            },
+            reject,
         );
     });
+
+    // Gagal → buang dari daftar supaya bisa dicoba lagi saat marker ditemukan lagi.
+    promise.catch(function () {
+        modelLoads.delete(modelSrc);
+    });
+
+    modelLoads.set(modelSrc, promise);
+    return promise;
 }
 
 // ── Attach / Detach model ────────────────────────────────────────────────────
+// Model hanya dilepas-pasang kalau memang sudah ada di cache. Versi lama
+// mencopot model duluan lalu baru cek cache, jadi entity bisa ditinggal kosong.
 function attachModel(markerId, modelSrc) {
+    var cached = modelStates.get(modelSrc);
+    if (!cached || !cached.object3D) return;
+
     var marker = document.getElementById(markerId);
     if (!marker) return;
     var entity = marker.querySelector("a-entity");
@@ -411,19 +380,21 @@ function attachModel(markerId, modelSrc) {
     var modelData = parseMarkerModelData(marker);
     entity.setAttribute("position", modelData.modelPosition);
     entity.setAttribute("scale", modelData.modelScale);
-    entity.removeObject3D("dynamicModel");
+    // setObject3D otomatis melepas object lama dengan key yang sama.
+    entity.setObject3D("dynamicModel", cached.object3D);
 
-    var cached = modelStates.get(modelSrc);
-    if (cached && cached.object3D) {
-        entity.setObject3D("dynamicModel", cached.object3D);
-    }
+    if (cached.mixer) cached.mixer.timeScale = 1;
 }
 
-function detachModel(markerId) {
+function detachModel(markerId, modelSrc) {
     var marker = document.getElementById(markerId);
-    if (!marker) return;
-    var entity = marker.querySelector("a-entity");
-    if (entity) entity.removeObject3D("dynamicModel");
+    var entity = marker && marker.querySelector("a-entity");
+    if (entity && entity.getObject3D("dynamicModel")) {
+        entity.removeObject3D("dynamicModel");
+    }
+
+    var cached = modelStates.get(modelSrc);
+    if (cached && cached.mixer) cached.mixer.timeScale = 0;
 }
 
 function initMarkerListeners() {
@@ -439,6 +410,9 @@ function initMarkerListeners() {
 
         // Variabel untuk melacak apakah marker ini SEDANG di layar
         let isMarkerVisible = false;
+        // Timer grace period markerLost; non-null artinya model masih terpasang
+        // walau tracking sedang putus.
+        let lostTimer = null;
 
         // Pre-decode audio ke AudioBuffer saat AR scene ready
         preloadAudioForMarker(marker);
@@ -447,95 +421,81 @@ function initMarkerListeners() {
             // Set status marker menjadi terlihat
             isMarkerVisible = true;
 
-            var version = bumpMarkerVisibilityVersion(markerId);
-            showLoading();
-            updateProgress(5);
+            // Tracking cuma berkedip sesaat — model dan audio masih jalan,
+            // jangan dipasang ulang atau audio akan mengulang dari awal.
+            if (lostTimer) {
+                clearTimeout(lostTimer);
+                lostTimer = null;
+                return;
+            }
 
             var audioSrc = parseMarkerModelData(marker).audioSrc;
-            console.log(
-                "[ar-loader] markerFound mendeteksi audioSrc:",
-                audioSrc,
-            );
 
-            var triggerAudio = function () {
-                // Cek isMarkerVisible sebelum benar-benar memutar audio
-                if (audioSrc && isMarkerVisible) {
-                    console.log(
-                        "[ar-loader] Model siap, memutar audio:",
-                        audioSrc,
-                    );
+            var onReady = function () {
+                // Marker keburu hilang sebelum model siap.
+                if (!isMarkerVisible) return;
+
+                attachModel(markerId, modelSrc);
+                updateProgress(100);
+                hideLoading();
+
+                if (audioSrc) {
                     playAudioWhenReady(
                         audioSrc,
-                        "markerFound_Loaded:" + markerId,
+                        "markerFound:" + markerId,
                         markerId,
-                    );
-                } else if (!isMarkerVisible) {
-                    console.log(
-                        "[ar-loader] Model selesai diload, tapi marker keburu hilang. Audio batal diputar.",
                     );
                 }
             };
 
-            attachModel(markerId, modelSrc);
-
-            var cached = modelStates.get(modelSrc);
-            if (cached && cached.loaded) {
-                if (cached.mixer) {
-                    cached.mixer.timeScale = 1;
-                }
-                updateProgress(100);
-                hideLoading();
-
-                triggerAudio();
-            } else if (modelSrc) {
-                loadGLB(modelSrc, markerId, version)
-                    .then(function () {
-                        updateProgress(100);
-                        hideLoading();
-
-                        // Fungsi ini sekarang aman dari race condition
-                        triggerAudio();
-                    })
-                    .catch(function (err) {
-                        console.error(
-                            "[ar-loader] Gagal load model untuk",
-                            markerId,
-                            err,
-                        );
-                        updateProgress(100);
-                        hideLoading();
-                    });
-            } else {
-                updateProgress(100);
-                hideLoading();
-                triggerAudio();
+            // Model sudah di cache (atau marker memang tanpa model) → pasang seketika,
+            // tanpa memunculkan overlay loading lagi.
+            if (!modelSrc || modelStates.has(modelSrc)) {
+                onReady();
+                return;
             }
+
+            showLoading();
+            updateProgress(5);
+
+            ensureModel(modelSrc)
+                .then(onReady)
+                .catch(function (err) {
+                    console.error(
+                        "[ar-loader] Gagal load model untuk",
+                        markerId,
+                        err,
+                    );
+                    hideLoading();
+                });
         });
 
         marker.addEventListener("markerLost", function () {
             // Set status marker menjadi tidak terlihat
             isMarkerVisible = false;
 
-            bumpMarkerVisibilityVersion(markerId);
+            if (lostTimer) return;
 
-            // Stop Web Audio source saat marker hilang
-            stopMarkerAudio(markerId);
+            // Tahan sebentar: kalau marker ketemu lagi dalam grace period,
+            // model tidak berkedip dan audio tidak mengulang.
+            lostTimer = setTimeout(function () {
+                lostTimer = null;
 
-            // Pause HTML Audio fallback jika ada
-            var audioSrc = parseMarkerModelData(marker).audioSrc;
-            if (audioSrc) {
-                var audio = audioElements.get(audioSrc);
-                if (audio && !audio.paused) {
-                    audio.pause();
-                    audio.currentTime = 0;
+                // Stop Web Audio source saat marker hilang
+                stopMarkerAudio(markerId);
+
+                // Pause HTML Audio fallback jika ada
+                var audioSrc = parseMarkerModelData(marker).audioSrc;
+                if (audioSrc) {
+                    var audio = audioElements.get(audioSrc);
+                    if (audio && !audio.paused) {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    }
                 }
-            }
 
-            detachModel(markerId);
-            var cached = modelStates.get(modelSrc);
-            if (cached && cached.mixer) {
-                cached.mixer.timeScale = 0;
-            }
+                detachModel(markerId, modelSrc);
+            }, MARKER_LOST_GRACE_MS);
         });
     });
 
