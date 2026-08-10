@@ -165,11 +165,20 @@
         </svg>
     </button>
 
-    <a-scene embedded arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+    {{-- performanceProfile: default di HP = "phone-normal" (canvas deteksi 320x240, 30 fps).
+         Resolusi sekecil itu bikin confidence marker gampang jatuh sehingga model berkedip/hilang.
+         "desktop-normal" menaikkan canvas ke 640x480 dan deteksi ke 60 fps.
+         detectionMode "mono" saja karena semua marker bertipe pattern, bukan barcode. --}}
+    <a-scene embedded
+        arjs="sourceType: webcam; detectionMode: mono; performanceProfile: desktop-normal;"
         renderer="logarithmicDepthBuffer: true; antialias: true;" vr-mode-ui="enabled: false" gesture-detector
         id="scene" loading-screen="enabled: false">
         @foreach ($arMarkers as $marker)
+            {{-- min-confidence diturunkan dari 0.6: di 0.6 model langsung hilang saat pencahayaan
+                 atau sudut marker kurang ideal walau marker masih terlihat kamera.
+                 smooth merata-ratakan matriks beberapa frame supaya model tidak bergetar. --}}
             <a-marker type="pattern" url="/storage/{{ $marker->path_patt }}" raycaster="objects: .clickable"
+                min-confidence="0.4" smooth="true" smooth-count="5" smooth-tolerance="0.01" smooth-threshold="2"
                 emitevents="true" cursor="fuse: false; rayOrigin: mouse;" id="marker{{ $marker->marker_id }}"
                 data-marker-name="{{ $marker->nama }}" data-marker-code="{{ $marker->marker_code ?? '' }}"
                 data-disaster-name="{{ $marker->disaster?->name ?? '' }}"
